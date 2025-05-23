@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tienda de Colchones - Descanso Perfecto</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f5f0; /* Tono suave, casi crema */
+        }
+        .modal {
+            display: none; /* Oculto por defecto */
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .modal.show {
+            opacity: 1;
+        }
+        .modal-content {
+            background-color: #fff;
+            margin: auto;
+            padding: 2.5rem;
+            border-radius: 1rem; /* Más redondeado */
+            box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Sombra más suave */
+            max-width: 90%;
+            width: 500px;
+            position: relative;
+            transform: translateY(-20px);
+            transition: transform 0.3s ease-in-out;
+        }
+        .modal.show .modal-content {
+            transform: translateY(0);
+        }
+        .close-button {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #9ca3af; /* Color más suave */
+        }
+        .close-button:hover {
+            color: #4b5563;
+        }
+        .product-card, .category-block {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            border-radius: 1.5rem; /* Más redondeado */
+        }
+        .product-card:hover, .category-block:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+        }
+        /* Estilos para el panel de administrador y contacto */
+        #adminDashboard, #contactContent {
+            display: none; /* Oculto por defecto */
+        }
+        .favorite-button {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 1.5rem;
+            color: #d1d5db; /* Corazón gris por defecto */
+            cursor: pointer;
+            transition: color 0.2s ease-in-out, transform 0.2s ease-in-out;
+        }
+        .favorite-button.favorited {
+            color: #ef4444; /* Corazón rojo cuando es favorito */
+            transform: scale(1.1);
+        }
+        .favorite-button:hover {
+            transform: scale(1.2);
+        }
+        .category-block {
+            cursor: pointer;
+            background-color: #fff;
+            padding: 2rem;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 200px;
+        }
+        .category-block i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: #a16207; /* Color de icono de categoría */
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gradient-to-r from-amber-600 to-orange-700 text-white p-6 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-3xl font-bold rounded-lg px-3 py-1 bg-white bg-opacity-30">Descanso Perfecto</h1>
+            <nav>
+                <ul class="flex space-x-6">
+                    <li><a href="#" class="hover:text-amber-200 transition duration-300" onclick="showCategoryContent()">Inicio</a></li>
+                    <li><a href="#" class="hover:text-amber-200 transition duration-300" onclick="showCategoryContent()">Productos</a></li>
+                    <li><a href="#" class="hover:text-amber-200 transition duration-300" onclick="showContactContent()">Contáctanos</a></li> <li>
+                        <button id="favoritesButton" class="relative hover:text-amber-200 transition duration-300">
+                            <i class="fas fa-heart text-xl"></i>
+                            <span id="favoritesItemCount" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">0</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button id="cartButton" class="relative hover:text-amber-200 transition duration-300">
+                            <i class="fas fa-shopping-cart text-xl"></i>
+                            <span id="cartItemCount" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">0</span>
+                        </button>
+                    </li>
+                    <li><button id="adminLoginButton" class="bg-white text-amber-700 px-4 py-2 rounded-full hover:bg-amber-100 transition duration-300 shadow-md">Admin</button></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main id="categoryContent" class="container mx-auto p-8 flex-grow">
+        <h2 class="text-4xl font-extrabold text-gray-800 mb-10 text-center">Explora Nuestros Colchones por Categoría</h2>
+        <div id="categoriesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+            </div>
+    </main>
+
+    <section id="contactContent" class="container mx-auto p-8 flex-grow">
+        <h2 class="text-4xl font-extrabold text-gray-800 mb-10 text-center">Contáctanos</h2>
+        <div class="bg-white rounded-xl shadow-lg p-8 max-w-2xl mx-auto">
+            <p class="text-gray-700 mb-6 text-center">¿Tienes alguna pregunta, sugerencia o necesitas ayuda? Envíanos un mensaje y te responderemos a la brevedad posible.</p>
+            <form id="contactForm" class="space-y-6">
+                <div>
+                    <label for="contactMessage" class="block text-gray-700 text-sm font-medium mb-2">Tu Mensaje / Situación:</label>
+                    <textarea id="contactMessage" rows="6" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500" placeholder="Ej: Necesito ayuda para elegir un colchón, tengo una duda sobre un pedido, etc." required></textarea>
+                </div>
+                <div>
+                    <label for="contactEmail" class="block text-gray-700 text-sm font-medium mb-2">Tu Correo Electrónico:</label>
+                    <input type="email" id="contactEmail" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500" placeholder="tu_correo@ejemplo.com" required>
+                </div>
+                <button type="submit" class="w-full bg-amber-600 text-white py-3 rounded-lg text-lg font-semibold hover:bg-amber-700 transition duration-300 shadow-md">Enviar Mensaje</button>
+            </form>
+        </div>
+    </section>
+
+    <section id="adminDashboard" class="container mx-auto p-8 flex-grow">
+        <h2 class="text-4xl font-extrabold text-gray-800 mb-10 text-center">Panel de Administrador</h2>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">Estadísticas de Ventas</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <p class="text-gray-600">Ventas Totales:</p>
+                    <p id="totalSales" class="text-3xl font-bold text-teal-600">$0.00</p>
+                </div>
+                <div>
+                    <p class="text-gray-600">Colchón Más Vendido:</p>
+                    <p id="mostSoldMattress" class="text-xl font-semibold text-amber-600">N/A</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">Añadir Nuevo Colchón</h3>
+            <form id="addProductForm" class="space-y-4">
+                <div>
+                    <label for="newProductName" class="block text-gray-700 text-sm font-medium mb-1">Nombre del Colchón:</label>
+                    <input type="text" id="newProductName" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500" required>
+                </div>
+                <div>
+                    <label for="newProductPrice" class="block text-gray-700 text-sm font-medium mb-1">Precio:</label>
+                    <input type="number" id="newProductPrice" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500" step="0.01" required>
+                </div>
+                <div>
+                    <label for="newProductCategory" class="block text-gray-700 text-sm font-medium mb-1">Categoría:</label>
+                    <select id="newProductCategory" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500" required>
+                        <option value="">Selecciona una categoría</option>
+                        </select>
+                </div>
+                <div>
+                    <label for="newProductImage" class="block text-gray-700 text-sm font-medium mb-1">URL de la Imagen (opcional):</label>
+                    <input type="text" id="newProductImage" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500" value="https://placehold.co/400x300/f8f5f0/000?text=Nuevo">
+                </div>
+                <button type="submit" class="bg-teal-600 text-white px-6 py-3 rounded-lg text-lg font-semibold hover:bg-teal-700 transition duration-300 shadow-md">Añadir Colchón</button>
+            </form>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">Gestionar Colchones Existentes</h3>
+            <div id="adminProductsList" class="space-y-4">
+                </div>
+        </div>
+    </section>
+
+    <div id="cartModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal('cartModal')">&times;</span>
+            <h3 class="text-3xl font-bold text-gray-800 mb-6 text-center">Tu Carrito de Compras</h3>
+            <div id="cartItems" class="space-y-4 max-h-80 overflow-y-auto pr-2">
+                <p id="emptyCartMessage" class="text-gray-500 text-center">Tu carrito está vacío.</p>
+            </div>
+            <div class="border-t border-gray-200 pt-6 mt-6 flex justify-between items-center">
+                <p class="text-xl font-semibold text-gray-700">Total:</p>
+                <p id="cartTotal" class="text-2xl font-bold text-amber-600">$0.00</p>
+            </div>
+            <button id="proceedToCheckoutButton" class="w-full bg-amber-600 text-white py-3 rounded-lg mt-8 text-lg font-semibold hover:bg-amber-700 transition duration-300 shadow-md">Proceder al Pago</button>
+        </div>
+    </div>
+
+    <div id="favoritesModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal('favoritesModal')">&times;</span>
+            <h3 class="text-3xl font-bold text-gray-800 mb-6 text-center">Tus Colchones Favoritos</h3>
+            <div id="favoritesItems" class="space-y-4 max-h-80 overflow-y-auto pr-2">
+                <p id="emptyFavoritesMessage" class="text-gray-500 text-center">No tienes colchones favoritos aún.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="categoryProductsModal" class="modal">
+        <div class="modal-content !w-auto !max-w-4xl"> <span class="close-button" onclick="closeModal('categoryProductsModal')">&times;</span>
+            <h3 id="categoryModalTitle" class="text-3xl font-bold text-gray-800 mb-6 text-center">Colchones en [Categoría]</h3>
+            <div id="categoryProductsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                </div>
+        </div>
+    </div>
+
+    <div id="checkoutModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal('checkoutModal')">&times;</span>
+            <h3 class="text-3xl font-bold text-gray-800 mb-6 text-center">Detalles de Envío y Pago</h3>
+            <form id="checkoutForm" class="space-y-6">
+                <h4 class="text-xl font-semibold text-gray-700">Dirección de Envío</h4>
+                <div>
+                    <label for="addressStreet" class="block text-gray-700 text-sm font-medium mb-2">Calle y Número:</label>
+                    <input type="text" id="addressStreet" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500" required>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="addressCity" class="block text-gray-700 text-sm font-medium mb-2">Ciudad:</label>
+                        <input type="text" id="addressCity" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500" required>
+                    </div>
+                    <div>
+                        <label for="addressZip" class="block text-gray-700 text-sm font-medium mb-2">Código Postal:</label>
+                        <input type="text" id="addressZip" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500" required>
+                    </div>
+                </div>
+
+                <h4 class="text-xl font-semibold text-gray-700 mt-8">Información de Pago</h4>
+                <div>
+                    <label for="cardNumber" class="block text-gray-700 text-sm font-medium mb-2">Número de Tarjeta:</label>
+                    <input type="text" id="cardNumber" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500" placeholder="XXXX XXXX XXXX XXXX" required pattern="[0-9]{13,19}">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="cardExpiry" class="block text-gray-700 text-sm font-medium mb-2">Fecha de Vencimiento (MM/AA):</label>
+                        <input type="text" id="cardExpiry" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500" placeholder="MM/AA" required pattern="(0[1-9]|1[0-2])\/[0-9]{2}">
+                    </div>
+                    <div>
+                        <label for="cardCvv" class="block text-gray-700 text-sm font-medium mb-2">CVV:</label>
+                        <input type="text" id="cardCvv" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500" placeholder="XXX" required pattern="[0-9]{3,4}">
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-teal-600 text-white py-3 rounded-lg text-lg font-semibold hover:bg-teal-700 transition duration-300 shadow-md">Confirmar Compra</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="adminLoginModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal('adminLoginModal')">&times;</span>
+            <h3 class="text-3xl font-bold text-gray-800 mb-6 text-center">Acceso de Administrador</h3>
+            <form id="adminLoginForm" class="space-y-6">
+                <div>
+                    <label for="adminEmail" class="block text-gray-700 text-sm font-medium mb-2">Correo Electrónico:</label>
+                    <input type="email" id="adminEmail" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500" placeholder="lalomtzdelagarza@gmail.com" required>
+                </div>
+                <div>
+                    <label for="adminPassword" class="block text-gray-700 text-sm font-medium mb-2">Contraseña:</label>
+                    <input type="password" id="adminPassword" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500" placeholder="********" required>
+                </div>
+                <p id="loginMessage" class="text-red-500 text-center font-medium"></p>
+                <button type="submit" class="w-full bg-amber-600 text-white py-3 rounded-lg text-lg font-semibold hover:bg-amber-700 transition duration-300 shadow-md">Iniciar Sesión</button>
+            </form>
+            <div id="adminPanel" class="hidden mt-6 p-6 bg-amber-50 border border-amber-200 rounded-lg text-center">
+                <p class="text-amber-700 text-xl font-semibold">¡Bienvenido, Administrador!</p>
+                <p class="text-amber-600 mt-2">Ahora puedes gestionar la tienda.</p>
+                <button id="adminLogoutButton" class="mt-4 bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition duration-300">Cerrar Sesión</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-stone-800 text-white p-6 text-center mt-auto shadow-inner">
+        <div class="container mx-auto">
+            <p>&copy; 2025 Descanso Perfecto. Todos los derechos reservados.</p>
+            <div class="flex justify-center space-x-4 mt-3">
+                <a href="#" class="hover:text-amber-400 transition duration-300"><i class="fab fa-facebook-f"></i></a>
+                <a href="#" class="hover:text-amber-400 transition duration-300"><i class="fab fa-twitter"></i></a>
+                <a href="#" class="hover:text-amber-400 transition duration-300"><i class="fab fa-instagram"></i></a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Data de productos
+        let products = JSON.parse(localStorage.getItem('products')) || [
+            { id: 1, name: 'Colchón Ortopédico Firme', price: 599.99, image: 'https://placehold.co/400x300/f8f5f0/000?text=Ortopedico', category: 'Ortopédicos' },
+            { id: 2, name: 'Colchón Viscoelástico Confort', price: 749.99, image: 'https://placehold.co/400x300/f8f5f0/000?text=Viscoelastico', category: 'Viscoelásticos' },
+            { id: 3, name: 'Colchón de Muelles Ensacados', price: 679.99, image: 'https://placehold.co/400x300/f8f5f0/000?text=Muelles', category: 'Muelles Ensacados' },
+            { id: 4, name: 'Colchón Híbrido Premium', price: 899.99, image: 'https://placehold.co/400x300/f8f5f0/000?text=Hibrido', category: 'Híbridos' },
+            { id: 5, name: 'Colchón de Látex Natural', price: 829.99, image: 'https://placehold.co/400x300/f8f5f0/000?text=Latex', category: 'Látex' },
+            { id: 6, name: 'Colchón para Niños', price: 349.99, image: 'https://placehold.co/400x300/f8f5f0/000?text=Niños', category: 'Infantiles' },
+            { id: 7, name: 'Colchón Ortopédico Avanzado', price: 650.00, image: 'https://placehold.co/400x300/f8f5f0/000?text=Ortopedico+Avanzado', category: 'Ortopédicos' },
+            { id: 8, name: 'Colchón Ortopédico Básico', price: 450.00, image: 'https://placehold.co/400x300/f8f5f0/000?text=Ortopedico+Basico', category: 'Ortopédicos' },
+            { id: 9, name: 'Colchón Viscoelástico Firme', price: 780.00, image: 'https://placehold.co/400x300/f8f5f0/000?text=Viscoelastico+Firme', category: 'Viscoelásticos' },
+            { id: 10, name: 'Colchón Viscoelástico Suave', price: 720.00, image: 'https://placehold.co/400x300/f8f5f0/000?text=Viscoelastico+Suave', category: 'Viscoelásticos' },
+        ];
+
+        // Mock data para estadísticas de ventas
+        let salesData = JSON.parse(localStorage.getItem('salesData')) || {
+            totalSalesAmount: 0,
+            productSalesCount: {}, // { productId: count }
+            purchaseHistory: [] // [{ items: [], total: 0, date: '', address: '' }]
+        };
+
+        let cart = JSON.parse(localStorage.getItem('cart')) || []; // Cargar carrito desde localStorage
+        let favorites = JSON.parse(localStorage.getItem('favorites')) || []; // Cargar favoritos desde localStorage
+        let isAdminLoggedIn = false;
+
+        // Credenciales de administrador (NO SEGURO PARA PRODUCCIÓN)
+        const ADMIN_EMAIL = 'lalomtzdelagarza@gmail.com';
+        const ADMIN_PASSWORD = 'Waro4080%';
+
+        // Referencias a elementos del DOM
+        const categoryContent = document.getElementById('categoryContent'); // Contenido de categorías
+        const contactContent = document.getElementById('contactContent'); // Contenido de contacto
+        const adminDashboard = document.getElementById('adminDashboard');
+        const categoriesGrid = document.getElementById('categoriesGrid'); // Nuevo elemento para las categorías
+        const productsGrid = document.getElementById('productsGrid'); // Este ya no se usa directamente para la vista principal
+        const cartButton = document.getElementById('cartButton');
+        const cartModal = document.getElementById('cartModal');
+        const cartItemsContainer = document.getElementById('cartItems');
+        const cartTotalSpan = document.getElementById('cartTotal');
+        const cartItemCountSpan = document.getElementById('cartItemCount');
+        const emptyCartMessage = document.getElementById('emptyCartMessage');
+        const proceedToCheckoutButton = document.getElementById('proceedToCheckoutButton');
+
+        const favoritesButton = document.getElementById('favoritesButton');
+        const favoritesModal = document.getElementById('favoritesModal');
+        const favoritesItemsContainer = document.getElementById('favoritesItems');
+        const emptyFavoritesMessage = document.getElementById('emptyFavoritesMessage');
+        const favoritesItemCountSpan = document.getElementById('favoritesItemCount');
+
+        const categoryProductsModal = document.getElementById('categoryProductsModal'); // Nuevo modal
+        const categoryModalTitle = document.getElementById('categoryModalTitle'); // Título del modal de categoría
+        const categoryProductsGrid = document.getElementById('categoryProductsGrid'); // Contenedor de productos en el modal de categoría
+
+        const checkoutModal = document.getElementById('checkoutModal');
+        const checkoutForm = document.getElementById('checkoutForm');
+
+        const adminLoginButton = document.getElementById('adminLoginButton');
+        const adminLoginModal = document.getElementById('adminLoginModal');
+        const adminLoginForm = document.getElementById('adminLoginForm');
+        const adminEmailInput = document.getElementById('adminEmail');
+        const adminPasswordInput = document.getElementById('adminPassword');
+        const loginMessage = document.getElementById('loginMessage');
+        const adminPanel = document.getElementById('adminPanel');
+        const adminLogoutButton = document.getElementById('adminLogoutButton');
+
+        // Contact Form Elements
+        const contactForm = document.getElementById('contactForm');
+        const contactMessageInput = document.getElementById('contactMessage');
+        const contactEmailInput = document.getElementById('contactEmail');
+
+        // Admin Dashboard elements
+        const totalSalesSpan = document.getElementById('totalSales');
+        const mostSoldMattressSpan = document.getElementById('mostSoldMattress');
+        const addProductForm = document.getElementById('addProductForm');
+        const newProductNameInput = document.getElementById('newProductName');
+        const newProductPriceInput = document.getElementById('newProductPrice');
+        const newProductImageInput = document.getElementById('newProductImage');
+        const newProductCategorySelect = document.getElementById('newProductCategory'); // Nuevo select de categoría
+        const adminProductsList = document.getElementById('adminProductsList');
+
+        // --- Funciones de Utilidad de UI ---
+        function showModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.style.display = 'flex';
+            setTimeout(() => modal.classList.add('show'), 10); // Pequeño retraso para la transición
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.remove('show');
+            setTimeout(() => modal.style.display = 'none', 300); // Esperar a que termine la transición
+            if (modalId === 'adminLoginModal') {
+                loginMessage.textContent = ''; // Limpiar mensaje de login al cerrar
+                adminLoginForm.reset(); // Resetear formulario al cerrar
+            }
+            if (modalId === 'checkoutModal') {
+                checkoutForm.reset(); // Resetear formulario de checkout
+            }
+        }
+
+        function hideAllContentSections() {
+            categoryContent.style.display = 'none';
+            adminDashboard.style.display = 'none';
+            contactContent.style.display = 'none';
+        }
+
+        function showCategoryContent() {
+            hideAllContentSections();
+            categoryContent.style.display = 'block';
+        }
+
+        function showAdminDashboard() {
+            hideAllContentSections();
+            adminDashboard.style.display = 'block';
+            populateCategorySelect(); // Llenar el select de categorías en el admin
+            renderAdminProducts();
+            updateAdminStats();
+        }
+
+        function showContactContent() {
+            hideAllContentSections();
+            contactContent.style.display = 'block';
+        }
+
+        // --- Funciones de Productos (Cliente) ---
+        function getUniqueCategories() {
+            const categories = products.map(product => product.category);
+            return [...new Set(categories)].sort(); // Obtener únicas y ordenar
+        }
+
+        function renderCategoryBlocks() {
+            categoriesGrid.innerHTML = ''; // Limpiar la cuadrícula
+            const uniqueCategories = getUniqueCategories();
+
+            if (uniqueCategories.length === 0) {
+                categoriesGrid.innerHTML = '<p class="text-gray-500 text-center col-span-full">No hay categorías de colchones disponibles.</p>';
+                return;
+            }
+
+            uniqueCategories.forEach(category => {
+                // Puedes asignar un icono diferente a cada categoría si lo deseas
+                let iconClass = 'fas fa-bed'; // Icono por defecto
+                if (category === 'Ortopédicos') iconClass = 'fas fa-bone';
+                else if (category === 'Viscoelásticos') iconClass = 'fas fa-cloud';
+                else if (category === 'Muelles Ensacados') iconClass = 'fas fa-spring';
+                else if (category === 'Híbridos') iconClass = 'fas fa-layer-group';
+                else if (category === 'Látex') iconClass = 'fas fa-leaf';
+                else if (category === 'Infantiles') iconClass = 'fas fa-child';
+
+                const categoryBlock = `
+                    <div class="bg-white rounded-2xl shadow-md overflow-hidden category-block" data-category="${category}">
+                        <i class="${iconClass}"></i>
+                        <h3 class="text-2xl font-semibold text-gray-900">${category}</h3>
+                    </div>
+                `;
+                categoriesGrid.innerHTML += categoryBlock;
+            });
+
+            // Añadir event listeners a los bloques de categoría
+            document.querySelectorAll('.category-block').forEach(block => {
+                block.addEventListener('click', (event) => {
+                    const category = event.currentTarget.dataset.category;
+                    renderProductsByCategory(category);
+                });
+            });
+        }
+
+        function renderProductsByCategory(category) {
+            categoryModalTitle.textContent = `Colchones en ${category}`;
+            categoryProductsGrid.innerHTML = ''; // Limpiar la cuadrícula del modal
+
+            const filteredProducts = products.filter(p => p.category === category);
+
+            if (filteredProducts.length === 0) {
+                categoryProductsGrid.innerHTML = '<p class="text-gray-500 text-center col-span-full">No hay colchones en esta categoría.</p>';
+            } else {
+                filteredProducts.forEach(product => {
+                    const isFavorited = favorites.some(fav => fav.id === product.id);
+                    const favoriteClass = isFavorited ? 'fas fa-heart favorited' : 'far fa-heart';
+
+                    const productCard = `
+                        <div class="bg-white rounded-2xl shadow-md overflow-hidden product-card relative">
+                            <button class="favorite-button" data-product-id="${product.id}">
+                                <i class="${favoriteClass}"></i>
+                            </button>
+                            <img src="${product.image}" alt="${product.name}" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/400x300/f8f5f0/000?text=Imagen+No+Disponible';">
+                            <div class="p-6">
+                                <h3 class="text-xl font-semibold text-gray-900 mb-2">${product.name}</h3>
+                                <p class="text-gray-600 mb-4">Colchón de categoría ${product.category}.</p>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-2xl font-bold text-amber-600">$${product.price.toFixed(2)}</span>
+                                    <button class="bg-amber-600 text-white px-5 py-2 rounded-full hover:bg-amber-700 transition duration-300 shadow-md add-to-cart-btn" data-product-id="${product.id}">
+                                        <i class="fas fa-cart-plus mr-2"></i>Añadir
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    categoryProductsGrid.innerHTML += productCard;
+                });
+
+                // Añadir event listeners a los botones "Añadir al carrito" dentro del modal
+                document.querySelectorAll('#categoryProductsGrid .add-to-cart-btn').forEach(button => {
+                    button.addEventListener('click', (event) => {
+                        const productId = parseInt(event.currentTarget.dataset.productId);
+                        addToCart(productId);
+                    });
+                });
+
+                // Añadir event listeners a los botones de corazón dentro del modal
+                document.querySelectorAll('#categoryProductsGrid .favorite-button').forEach(button => {
+                    button.addEventListener('click', (event) => {
+                        const productId = parseInt(event.currentTarget.dataset.productId);
+                        toggleFavorite(productId);
+                    });
+                });
+            }
+            showModal('categoryProductsModal');
+        }
+
+
+        // --- Funciones del Carrito ---
+        function addToCart(productId) {
+            const product = products.find(p => p.id === productId);
+            if (product) {
+                const existingItem = cart.find(item => item.id === productId);
+                if (existingItem) {
+                    existingItem.quantity++;
+                } else {
+                    cart.push({ ...product, quantity: 1 });
+                }
+                saveCart();
+                updateCartDisplay();
+                showCustomMessage(`"${product.name}" añadido al carrito!`, 'success');
+            }
+        }
+
+        function removeFromCart(productId) {
+            cart = cart.filter(item => item.id !== productId);
+            saveCart();
+            updateCartDisplay();
+            showCustomMessage('Artículo eliminado del carrito.', 'info');
+        }
+
+        function updateCartDisplay() {
+            cartItemsContainer.innerHTML = '';
+            let total = 0;
+
+            if (cart.length === 0) {
+                emptyCartMessage.style.display = 'block';
+                proceedToCheckoutButton.disabled = true; // Deshabilitar botón si el carrito está vacío
+                proceedToCheckoutButton.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                emptyCartMessage.style.display = 'none';
+                proceedToCheckoutButton.disabled = false; // Habilitar botón
+                proceedToCheckoutButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                cart.forEach(item => {
+                    const itemHtml = `
+                        <div class="flex items-center justify-between border-b border-gray-100 pb-4 mb-4">
+                            <div class="flex items-center">
+                                <img src="${item.image}" alt="${item.name}" class="w-16 h-16 object-cover rounded-lg mr-4" onerror="this.onerror=null;this.src='https://placehold.co/64x64/f8f5f0/000?text=Prod';">
+                                <div>
+                                    <p class="font-semibold text-gray-800">${item.name}</p>
+                                    <p class="text-sm text-gray-600">Cantidad: ${item.quantity}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="font-bold text-gray-900 mr-4">$${(item.price * item.quantity).toFixed(2)}</span>
+                                <button class="text-red-500 hover:text-red-700 transition duration-300 remove-from-cart-btn" data-product-id="${item.id}">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    cartItemsContainer.innerHTML += itemHtml;
+                    total += item.price * item.quantity;
+                });
+            }
+
+            cartTotalSpan.textContent = `$${total.toFixed(2)}`;
+            cartItemCountSpan.textContent = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+            // Añadir event listeners a los botones "Eliminar del carrito"
+            document.querySelectorAll('.remove-from-cart-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const productId = parseInt(event.currentTarget.dataset.productId);
+                    removeFromCart(productId);
+                });
+            });
+        }
+
+        function saveCart() {
+            localStorage.setItem('cart', JSON.stringify(cart));
+        }
+
+        // --- Funciones de Favoritos ---
+        function toggleFavorite(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+
+            const isFavorited = favorites.some(fav => fav.id === productId);
+            if (isFavorited) {
+                favorites = favorites.filter(fav => fav.id !== productId);
+                showCustomMessage(`"${product.name}" eliminado de favoritos.`, 'info');
+            } else {
+                favorites.push(product);
+                showCustomMessage(`"${product.name}" añadido a favoritos!`, 'success');
+            }
+            saveFavorites();
+            updateFavoritesDisplay();
+            // Re-renderizar productos en la vista actual (categorías o modal de categoría)
+            if (categoryContent.style.display === 'block') {
+                renderCategoryBlocks(); // Si estamos en la vista de categorías, no hay productos individuales
+            } else if (categoryProductsModal.classList.contains('show')) {
+                // Si el modal de categoría está abierto, re-renderiza sus productos para actualizar el corazón
+                renderProductsByCategory(categoryModalTitle.textContent.replace('Colchones en ', ''));
+            }
+        }
+
+        function removeFromFavorites(productId) {
+            const product = products.find(p => p.id === productId);
+            favorites = favorites.filter(fav => fav.id !== productId);
+            saveFavorites();
+            updateFavoritesDisplay();
+            // Re-renderizar productos en la vista actual (categorías o modal de categoría)
+            if (categoryContent.style.display === 'block') {
+                renderCategoryBlocks();
+            } else if (categoryProductsModal.classList.contains('show')) {
+                renderProductsByCategory(categoryModalTitle.textContent.replace('Colchones en ', ''));
+            }
+            showCustomMessage(`"${product.name}" eliminado de favoritos.`, 'info');
+        }
+
+        function updateFavoritesDisplay() {
+            favoritesItemsContainer.innerHTML = '';
+            if (favorites.length === 0) {
+                emptyFavoritesMessage.style.display = 'block';
+            } else {
+                emptyFavoritesMessage.style.display = 'none';
+                favorites.forEach(item => {
+                    const itemHtml = `
+                        <div class="flex items-center justify-between border-b border-gray-100 pb-4 mb-4">
+                            <div class="flex items-center">
+                                <img src="${item.image}" alt="${item.name}" class="w-16 h-16 object-cover rounded-lg mr-4" onerror="this.onerror=null;this.src='https://placehold.co/64x64/f8f5f0/000?text=Prod';">
+                                <div>
+                                    <p class="font-semibold text-gray-800">${item.name}</p>
+                                    <p class="text-sm text-gray-600">$${item.price.toFixed(2)}</p>
+                                </div>
+                            </div>
+                            <button class="text-red-500 hover:text-red-700 transition duration-300 remove-from-favorites-btn" data-product-id="${item.id}">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    `;
+                    favoritesItemsContainer.innerHTML += itemHtml;
+                });
+            }
+            favoritesItemCountSpan.textContent = favorites.length;
+
+            document.querySelectorAll('.remove-from-favorites-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const productId = parseInt(event.currentTarget.dataset.productId);
+                    removeFromFavorites(productId);
+                });
+            });
+        }
+
+        function saveFavorites() {
+            localStorage.setItem('favorites', JSON.stringify(favorites));
+        }
+
+        // --- Funciones de Mensajes Personalizados (sin alert()) ---
+        function showCustomMessage(message, type = 'info') {
+            const messageBox = document.createElement('div');
+            messageBox.textContent = message;
+            messageBox.className = `fixed bottom-6 right-6 p-4 rounded-lg shadow-lg text-white z-50 transition-all duration-300 transform translate-y-full opacity-0`;
+
+            if (type === 'success') {
+                messageBox.classList.add('bg-teal-600'); /* Color de éxito vintage */
+            } else if (type === 'error') {
+                messageBox.classList.add('bg-red-600');
+            } else {
+                messageBox.classList.add('bg-amber-600'); /* Color de información vintage */
+            }
+
+            document.body.appendChild(messageBox);
+
+            // Animate in
+            setTimeout(() => {
+                messageBox.classList.remove('translate-y-full', 'opacity-0');
+                messageBox.classList.add('translate-y-0', 'opacity-100');
+            }, 50);
+
+            // Animate out and remove
+            setTimeout(() => {
+                messageBox.classList.remove('translate-y-0', 'opacity-100');
+                messageBox.classList.add('translate-y-full', 'opacity-0');
+                messageBox.addEventListener('transitionend', () => messageBox.remove());
+            }, 3000);
+        }
+
+        // --- Funciones de Contacto ---
+        function handleContactFormSubmit(event) {
+            event.preventDefault();
+            const message = contactMessageInput.value;
+            const email = contactEmailInput.value;
+
+            console.log(`Mensaje de contacto recibido de ${email}:`);
+            console.log(message);
+
+            // --- IMPORTANTE ---
+            // Aquí es donde en un sitio web real se enviaría el mensaje a un servidor.
+            // El servidor lo guardaría en una base de datos y/o lo reenviaría a tu correo electrónico.
+            // Y luego, el servidor podría enviar una confirmación al correo del usuario.
+            // Como esto es un proyecto de frontend, simulamos el envío.
+
+            showCustomMessage(`¡Mensaje recibido! Te enviaremos una confirmación a ${email} pronto.`, 'success');
+
+            // Limpiar el formulario
+            contactForm.reset();
+        }
+
+        // --- Funciones de Administración ---
+        function handleAdminLogin(event) {
+            event.preventDefault();
+            const email = adminEmailInput.value;
+            const password = adminPasswordInput.value;
+
+            if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+                isAdminLoggedIn = true;
+                loginMessage.textContent = '';
+                closeModal('adminLoginModal'); // Cerrar el modal de login
+                showAdminDashboard(); // Mostrar el panel de administrador
+                showCustomMessage('Inicio de sesión de administrador exitoso!', 'success');
+            } else {
+                isAdminLoggedIn = false;
+                loginMessage.textContent = 'Correo o contraseña incorrectos.';
+                showCustomMessage('Error de inicio de sesión.', 'error');
+            }
+        }
+
+        function handleAdminLogout() {
+            isAdminLoggedIn = false;
+            showCategoryContent(); // Volver a la vista de categorías
+            adminEmailInput.value = '';
+            adminPasswordInput.value = '';
+            loginMessage.textContent = '';
+            showCustomMessage('Sesión de administrador cerrada.', 'info');
+        }
+
+        function populateCategorySelect() {
+            newProductCategorySelect.innerHTML = '<option value="">Selecciona una categoría</option>'; // Reset
+            const uniqueCategories = getUniqueCategories();
+            uniqueCategories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                newProductCategorySelect.appendChild(option);
+            });
+            // Opción para añadir una nueva categoría (si se desea)
+            const newOption = document.createElement('option');
+            newOption.value = 'Nueva Categoría';
+            newOption.textContent = 'Añadir Nueva Categoría...';
+            newProductCategorySelect.appendChild(newOption);
+        }
+
+        function addProduct(name, price, image, category) {
+            const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
+            const newProduct = { id: newId, name, price: parseFloat(price), image, category };
+            products.push(newProduct);
+            saveProducts();
+            renderCategoryBlocks(); // Actualizar la vista de categorías
+            renderAdminProducts(); // Actualizar la vista del administrador
+            populateCategorySelect(); // Actualizar select de categorías
+            showCustomMessage(`Colchón "${name}" añadido a la categoría "${category}".`, 'success');
+        }
+
+        function removeProduct(productId) {
+            products = products.filter(p => p.id !== productId);
+            // También eliminar de favoritos si estaba allí
+            favorites = favorites.filter(fav => fav.id !== productId);
+            saveFavorites();
+            saveProducts();
+            renderCategoryBlocks(); // Actualizar la vista de categorías
+            renderAdminProducts(); // Actualizar la vista del administrador
+            updateFavoritesDisplay(); // Asegurarse de que los favoritos se actualicen
+            populateCategorySelect(); // Actualizar select de categorías
+            showCustomMessage('Colchón eliminado.', 'info');
+        }
+
+        function saveProducts() {
+            localStorage.setItem('products', JSON.stringify(products));
+        }
+
+        function loadProducts() {
+            const storedProducts = localStorage.getItem('products');
+            if (storedProducts) {
+                products = JSON.parse(storedProducts);
+            }
+        }
+
+        function renderAdminProducts() {
+            adminProductsList.innerHTML = '';
+            if (products.length === 0) {
+                adminProductsList.innerHTML = '<p class="text-gray-500 text-center">No hay colchones para gestionar.</p>';
+                return;
+            }
+            // Ordenar productos por categoría para una mejor gestión en el admin
+            const sortedProducts = [...products].sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
+
+            sortedProducts.forEach(product => {
+                const productItem = `
+                    <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg shadow-sm">
+                        <div class="flex items-center">
+                            <img src="${product.image}" alt="${product.name}" class="w-16 h-16 object-cover rounded-lg mr-4" onerror="this.onerror=null;this.src='https://placehold.co/64x64/f8f5f0/000?text=Prod';">
+                            <div>
+                                <p class="font-semibold text-gray-800">${product.name} <span class="text-sm text-gray-500">(${product.category})</span></p>
+                                <p class="text-sm text-gray-600">$${product.price.toFixed(2)}</p>
+                            </div>
+                        </div>
+                        <button class="bg-red-600 text-white px-4 py-2 rounded-full hover:bg-red-700 transition duration-300 remove-admin-product-btn" data-product-id="${product.id}">
+                            <i class="fas fa-trash-alt mr-2"></i>Quitar
+                        </button>
+                    </div>
+                `;
+                adminProductsList.innerHTML += productItem;
+            });
+
+            document.querySelectorAll('.remove-admin-product-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const productId = parseInt(event.currentTarget.dataset.productId);
+                    removeProduct(productId);
+                });
+            });
+        }
+
+        function updateAdminStats() {
+            totalSalesSpan.textContent = `$${salesData.totalSalesAmount.toFixed(2)}`;
+
+            let maxSalesCount = 0;
+            let mostSoldProductId = null;
+
+            for (const productId in salesData.productSalesCount) {
+                if (salesData.productSalesCount[productId] > maxSalesCount) {
+                    maxSalesCount = salesData.productSalesCount[productId];
+                    mostSoldProductId = parseInt(productId);
+                }
+            }
+
+            if (mostSoldProductId) {
+                const mostSoldProduct = products.find(p => p.id === mostSoldProductId);
+                if (mostSoldProduct) {
+                    mostSoldMattressSpan.textContent = `${mostSoldProduct.name} (${maxSalesCount} unidades)`;
+                } else {
+                    mostSoldMattressSpan.textContent = 'Producto no encontrado (ID: ' + mostSoldProductId + ')';
+                }
+            } else {
+                mostSoldMattressSpan.textContent = 'N/A (sin ventas)';
+            }
+        }
+
+        function recordSale() {
+            let currentTotal = 0;
+            const purchasedItems = [];
+
+            cart.forEach(item => {
+                currentTotal += item.price * item.quantity;
+                purchasedItems.push({ id: item.id, name: item.name, quantity: item.quantity, price: item.price, category: item.category });
+
+                // Actualizar contador de ventas por producto
+                if (salesData.productSalesCount[item.id]) {
+                    salesData.productSalesCount[item.id] += item.quantity;
+                } else {
+                    salesData.productSalesCount[item.id] = item.quantity;
+                }
+            });
+
+            salesData.totalSalesAmount += currentTotal;
+            salesData.purchaseHistory.push({
+                items: purchasedItems,
+                total: currentTotal,
+                date: new Date().toLocaleString(),
+                // Address will be added from checkout form
+            });
+            localStorage.setItem('salesData', JSON.stringify(salesData));
+        }
+
+        // --- Event Listeners ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadProducts(); // Cargar productos al inicio
+            renderCategoryBlocks(); // Renderizar las categorías al inicio
+            updateCartDisplay(); // Actualizar el carrito al cargar la página
+            updateFavoritesDisplay(); // Actualizar favoritos al cargar la página
+            showCategoryContent(); // Asegurarse de que la vista principal (categorías) esté visible al cargar
+        });
+
+        cartButton.addEventListener('click', () => {
+            showModal('cartModal');
+        });
+
+        favoritesButton.addEventListener('click', () => {
+            showModal('favoritesModal');
+        });
+
+        proceedToCheckoutButton.addEventListener('click', () => {
+            closeModal('cartModal'); // Cerrar el modal del carrito
+            showModal('checkoutModal'); // Mostrar el modal de checkout
+        });
+
+        checkoutForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            // Aquí se simularía el procesamiento de pago
+            const street = document.getElementById('addressStreet').value;
+            const city = document.getElementById('addressCity').value;
+            const zip = document.getElementById('addressZip').value;
+            const cardNumber = document.getElementById('cardNumber').value;
+
+            // Guardar la dirección en el historial de ventas (última compra)
+            if (salesData.purchaseHistory.length > 0) {
+                salesData.purchaseHistory[salesData.purchaseHistory.length - 1].address = `${street}, ${city}, ${zip}`;
+                localStorage.setItem('salesData', JSON.stringify(salesData));
+            }
+
+            recordSale(); // Registrar la venta antes de limpiar el carrito
+            cart = []; // Vaciar el carrito
+            saveCart(); // Guardar el carrito vacío
+            updateCartDisplay(); // Actualizar la visualización del carrito
+
+            closeModal('checkoutModal'); // Cerrar el modal de checkout
+            showCustomMessage('¡Gracias por tu compra! Tu producto está en proceso y en camino.', 'success');
+        });
+
+
+        adminLoginButton.addEventListener('click', () => {
+            showModal('adminLoginModal');
+        });
+
+        adminLoginForm.addEventListener('submit', handleAdminLogin);
+        adminLogoutButton.addEventListener('click', handleAdminLogout);
+
+        addProductForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const name = newProductNameInput.value;
+            const price = newProductPriceInput.value;
+            const image = newProductImageInput.value;
+            let category = newProductCategorySelect.value;
+
+            if (category === 'Nueva Categoría') {
+                category = prompt('Introduce el nombre de la nueva categoría:');
+                if (!category) { // Si el usuario cancela o no introduce nada
+                    showCustomMessage('Operación cancelada. No se añadió el colchón.', 'info');
+                    return;
+                }
+            }
+            if (category) {
+                addProduct(name, price, image, category);
+                addProductForm.reset(); // Limpiar el formulario
+            } else {
+                showCustomMessage('Por favor, selecciona una categoría para el colchón.', 'error');
+            }
+        });
+
+        contactForm.addEventListener('submit', handleContactFormSubmit); // Listener para el formulario de contacto
+
+        // Cerrar modales al hacer clic fuera de ellos
+        window.addEventListener('click', (event) => {
+            if (event.target === cartModal) {
+                closeModal('cartModal');
+            }
+            if (event.target === adminLoginModal) {
+                closeModal('adminLoginModal');
+            }
+            if (event.target === checkoutModal) {
+                closeModal('checkoutModal');
+            }
+            if (event.target === favoritesModal) {
+                closeModal('favoritesModal');
+            }
+            if (event.target === categoryProductsModal) {
+                closeModal('categoryProductsModal');
+            }
+        });
+    </script>
+</body>
+</html>

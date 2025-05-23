@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tienda de Colchones - Descanso Perfecto</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f5f5f5; /* Gris muy claro */
+            overflow-x: hidden; /* Evitar el desplazamiento horizontal por el fondo animado */
+            position: relative; /* Necesario para el pseudo-elemento */
+        }
+        /* Fondo animado sutil */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1; /* Enviar al fondo */
+            background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 25%, #d0d0d0 50%, #e0e0e0 75%, #f5f5f5 100%);
+            background-size: 400% 400%; /* Tamaño más grande para permitir movimiento */
+            animation: backgroundPan 30s linear infinite; /* Animación lenta y continua */
+        }
+
+        @keyframes backgroundPan {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .modal {
+            display: none; /* Oculto por defecto */
+            position: fixed;
+            z-index: 200; /* Z-index aumentado para asegurar que esté encima */
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .modal.show {
+            opacity: 1;
+        }
+        .modal-content {
+            background-color: #fff;
+            margin: auto;
+            padding: 2.5rem;
+            border-radius: 1rem; /* Más redondeado */
+            box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Sombra más suave */
+            max-width: 90%;
+            width: 500px;
+            position: relative;
+            transform: translateY(-20px);
+            transition: transform 0.3s ease-in-out;
+        }
+        .modal.show .modal-content {
+            transform: translateY(0);
+        }
+        .close-button {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #9e9e9e; /* Color más suave */
+            transition: color 0.2s ease-in-out;
+        }
+        .close-button:hover {
+            color: #424242;
+        }
+        .product-card, .category-block,
+        button:not(.close-button), a.button-like { /* Aplicar transiciones a botones y elementos clickeables */
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
+            border-radius: 1.5rem; /* Más redondeado */
+        }
+        .product-card:hover, .category-block:hover,
+        button:not(.close-button):hover, a.button-like:hover {
+            transform: translateY(-3px); /* Sutil elevación */
+            box-shadow: 0 15px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+        }
+        button:not(.close-button):active, a.button-like:active {
+            transform: scale(0.98); /* Efecto de "presión" al hacer clic */
+        }
+
+        /* Estilos para el panel de administrador y contacto */
+        #adminDashboard, #contactContent {
+            display: none; /* Oculto por defecto */
+        }
+        .favorite-button {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 1.5rem;
+            color: #bdbdbd; /* Corazón gris por defecto */
+            cursor: pointer;
+            transition: color 0.2s ease-in-out, transform 0.2s ease-in-out;
+        }
+        .favorite-button.favorited {
+            color: #e53935; /* Corazón rojo cuando es favorito */
+            transform: scale(1.1);
+        }
+        .favorite-button:hover {
+            transform: scale(1.2);
+        }
+        .category-block {
+            cursor: pointer;
+            background-color: #fff;
+            padding: 2rem;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 200px;
+        }
+        .category-block i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: #616161; /* Color de icono de categoría */
+        }
+
+        /* Estilos para el carrusel (ahora scroll horizontal) */
+        .products-scroll-container {
+            display: flex;
+            overflow-x: auto; /* Habilitar el desplazamiento horizontal */
+            -webkit-overflow-scrolling: touch; /* Desplazamiento suave en iOS */
+            scroll-snap-type: x mandatory; /* Forzar el snap a los elementos */
+            padding-bottom: 1rem; /* Espacio para la barra de desplazamiento */
+            gap: 1rem; /* Espacio entre los elementos */
+        }
+        .products-scroll-container::-webkit-scrollbar {
+            height: 8px;
+        }
+        .products-scroll-container::-webkit-scrollbar-thumb {
+            background-color: #a0aec0; /* Color del "pulgar" del desplazamiento */
+            border-radius: 10px;
+        }
+        .products-scroll-container::-webkit-scrollbar-track {
+            background-color: #edf2f7; /* Color de la pista del desplazamiento */
+            border-radius: 10px;
+        }
+        .product-card-wrapper {
+            flex-shrink: 0; /* Evitar que los elementos se encojan */
+            width: 380px; /* Ancho base más grande para pantallas pequeñas */
+            scroll-snap-align: center; /* Alinear al centro al hacer snap */
+            padding: 0.5rem; /* Añadir padding interno para espacio visual */
+            box-sizing: border-box; /* Incluir padding en el cálculo del ancho */
+        }
+        /* Ajustar el ancho del modal de categoría para acomodar tarjetas más anchas */
+        #categoryProductsModal .modal-content {
+            max-width: 95%; /* Permitir que el modal ocupe más ancho de la pantalla */
+            width: 1200px; /* Un ancho fijo mayor para pantallas grandes, se ajustará con max-width */
+            /* Para móvil, se ajustará con max-width: 95% */
+        }
+
+        @media (min-width: 768px) { /* punto de interrupción md */
+            .product-card-wrapper {
+                width: calc(50% - 0.5rem); /* Dos tarjetas por fila con espacio */
+            }
+        }
+        @media (min-width: 1024px) { /* punto de interrupción lg */
+            .product-card-wrapper {
+                width: calc(33.333% - 0.666rem); /* Tres tarjetas por fila con espacio */
+            }
+        }
+        @media (min-width: 1280px) { /* punto de interrupción xl */
+            .product-card-wrapper {
+                width: calc(25% - 0.75rem); /* Cuatro tarjetas por fila con espacio */
+            }
+        }
+
+        /* Estilos del Chatbot */
+        #chatbot-container {
+            position: fixed;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%) translateX(-100%); /* Oculto por defecto */
+            opacity: 0;
+            background-color: #fff;
+            border-radius: 1rem;
+            box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            padding: 1rem;
+            z-index: 100;
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+            width: 380px; /* Ancho del chatbot */
+        }
+        #chatbot-container.show {
+            transform: translateY(-50%) translateX(0);
+            opacity: 1;
+        }
+
+        /* El botón flotante siempre visible */
+        #openChatbotFloating {
+            position: fixed;
+            bottom: 6rem; /* Ajuste para que no choque con el footer */
+            left: 1rem;
+            background-color: #3b82f6; /* Tailwind blue-500 */
+            color: white;
+            padding: 1rem;
+            border-radius: 9999px; /* Completamente redondo */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 100;
+            cursor: pointer;
+            transition: transform 0.2s ease-in-out, background-color 0.2s ease-in-out;
+        }
+        #openChatbotFloating:hover {
+            transform: scale(1.05);
+            background-color: #2563eb; /* Tailwind blue-600 */
+        }
+
+        /* Chatbot Avatar and Animations */
+        #chatbot-avatar {
+            /* Este div es el contenedor del SVG del avatar */
+            animation: idleFloat 3s infinite ease-in-out; /* Animación de flotar sutil para el estado inactivo */
+            position: relative;
+        }
+
+        @keyframes idleFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        #chatbot-avatar.chatbot-typing { /* Se aplica al contenedor del avatar cuando está "escribiendo" */
+            animation: typingBounce 0.6s infinite alternate; /* Animación de rebote más pronunciada al escribir */
+        }
+
+        @keyframes typingBounce {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-8px); }
+        }
+
+        /* Animación de parpadeo para los ojos del chatbot (siempre activa para un aspecto natural) */
+        .chatbot-eye {
+            transform-origin: center center;
+            animation: blink 4s infinite step-end;
+        }
+
+        @keyframes blink {
+            0%, 20%, 40%, 60%, 80%, 100% { transform: scaleY(1); } /* Ojos abiertos */
+            10%, 30%, 50%, 70%, 90% { transform: scaleY(0.1); } /* Ojos casi cerrados */
+        }
+
+        /* Animación de la boca del chatbot (solo activa cuando el chatbot está "hablando") */
+        #chatbot-avatar.chatbot-speaking .chatbot-mouth { /* Se aplica a la boca dentro del avatar cuando el chatbot está "hablando" */
+            animation: speak 0.3s infinite alternate; /* Animación de boca más rápida y pronunciada para hablar */
+        }
+
+        @keyframes speak {
+            0% { transform: scale(1, 1); } /* Tamaño normal */
+            50% { transform: scale(1.1, 0.8); } /* Ligeramente más ancho, aplastado para efecto de hablar */
+            100% { transform: scale(1, 1); }
+        }
+
+        .message-bubble {
+            background-color: #e0e0e0;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        .message-bubble.user {
+            background-color: #bbdefb; /* Azul claro para mensajes del usuario */
+            align-self: flex-end; /* Alinear a la derecha */
+            margin-left: auto;
+        }
+        .message-bubble.bot {
+            background-color: #e0e0e0; /* Gris claro para mensajes del bot */
+            align-self: flex-start; /* Alinear a la izquierda */
+            margin-right: auto;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-gradient-to-r from-gray-800 to-gray-900 text-white p-6 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-3xl font-bold rounded-lg px-3 py-1 bg-white bg-opacity-10">Descanso Perfecto</h1>
+            <nav>
+                <ul class="flex space-x-6">
+                    <li><a href="#" class="hover:text-gray-300 transition duration-300" onclick="playNavSound(); showCategoryContent();">Inicio</a></li>
+                    <li><a href="#" class="hover:text-gray-300 transition duration-300" onclick="playNavSound(); showCategoryContent();">Productos</a></li>
+                    <li><a href="#" class="hover:text-gray-300 transition duration-300" onclick="playNavSound(); showContactContent();">Contáctanos</a></li>
+                    <li>
+                        <button id="favoritesButton" class="relative hover:text-gray-300 transition duration-300" onclick="playNavSound(); showModal('favoritesModal');">
+                            <i class="fas fa-heart text-xl"></i>
+                            <span id="favoritesItemCount" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">0</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button id="cartButton" class="relative hover:text-gray-300 transition duration-300" onclick="playNavSound(); showModal('cartModal');">
+                            <i class="fas fa-shopping-cart text-xl"></i>
+                            <span id="cartItemCount" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">0</span>
+                        </button>
+                    </li>
+                    <li><button id="adminLoginButton" class="bg-white text-gray-700 px-4 py-2 rounded-full hover:bg-gray-100 transition duration-300 shadow-md" onclick="playNavSound(); showModal('adminLoginModal');">Admin</button></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main id="categoryContent" class="container mx-auto p-8 flex-grow">
+        <h2 class="text-4xl font-extrabold text-gray-800 mb-10 text-center">Explora Nuestros Colchones por Categoría</h2>
+        <div id="categoriesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+            </div>
+    </main>
+
+    <section id="contactContent" class="container mx-auto p-8 flex-grow">
+        <h2 class="text-4xl font-extrabold text-gray-800 mb-10 text-center">Contáctanos</h2>
+        <div class="bg-white rounded-xl shadow-lg p-8 max-w-2xl mx-auto">
+            <p class="text-gray-700 mb-6 text-center">¿Tienes alguna pregunta, sugerencia o necesitas ayuda? Envíanos un mensaje y te responderemos a la brevedad posible.</p>
+            <form id="contactForm" class="space-y-6">
+                <div>
+                    <label for="contactMessage" class="block text-gray-700 text-sm font-medium mb-2">Tu Mensaje / Situación:</label>
+                    <textarea id="contactMessage" rows="6" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-700 focus:border-blue-700" placeholder="Ej: Necesito ayuda para elegir un colchón, tengo una duda sobre un pedido, etc." required></textarea>
+                </div>
+                <div>
+                    <label for="contactEmail" class="block text-gray-700 text-sm font-medium mb-2">Tu Correo Electrónico:</label>
+                    <input type="email" id="contactEmail" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-700 focus:border-blue-700" placeholder="tu_correo@ejemplo.com" required>
+                </div>
+                <button type="submit" class="w-full bg-blue-700 text-white py-3 rounded-lg text-lg font-semibold hover:bg-blue-800 transition duration-300 shadow-md" onclick="playActionSound();">Enviar Mensaje</button>
+            </form>
+        </div>
+    </section>
+
+    <section id="adminDashboard" class="container mx-auto p-8 flex-grow">
+        <h2 class="text-4xl font-extrabold text-gray-800 mb-10 text-center">Panel de Administrador</h2>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">Estadísticas de Ventas</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <p class="text-gray-600">Ventas Totales:</p>
+                    <p id="totalSales" class="text-3xl font-bold text-green-700">$0.00</p>
+                </div>
+                <div>
+                    <p class="text-gray-600">Colchón Más Vendido:</p>
+                    <p id="mostSoldMattress" class="text-xl font-semibold text-blue-700">N/A</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">Historial de Ventas (Gráfico)</h3>
+            <div class="relative h-96">
+                <canvas id="salesChart"></canvas>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">Añadir Nuevo Colchón</h3>
+            <form id="addProductForm" class="space-y-4">
+                <div>
+                    <label for="newProductName" class="block text-gray-700 text-sm font-medium mb-1">Nombre del Colchón:</label>
+                    <input type="text" id="newProductName" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-700 focus:border-blue-700" required>
+                </div>
+                <div>
+                    <label for="newProductPrice" class="block text-gray-700 text-sm font-medium mb-1">Precio:</label>
+                    <input type="number" id="newProductPrice" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-700 focus:border-blue-700" step="0.01" required>
+                </div>
+                <div>
+                    <label for="newProductCategory" class="block text-gray-700 text-sm font-medium mb-1">Categoría:</label>
+                    <select id="newProductCategory" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-700 focus:border-blue-700" required>
+                        <option value="">Selecciona una categoría</option>
+                        </select>
+                </div>
+                <div>
+                    <label for="newProductImage" class="block text-gray-700 text-sm font-medium mb-1">URL de la Imagen (opcional):</label>
+                    <input type="text" id="newProductImage" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-700 focus:border-blue-700" value="https://placehold.co/400x300/f5f5f5/000?text=Nuevo">
+                    <!-- IMPORTANTE: Para una aplicación real, la carga de imágenes "como documento" requiere un backend (servidor)
+                         y un servicio de almacenamiento en la nube (ej. Firebase Storage, AWS S3).
+                         Este campo actualmente solo acepta URLs de imágenes. -->
+                </div>
+                <button type="submit" class="bg-blue-700 text-white px-6 py-3 rounded-lg text-lg font-semibold hover:bg-blue-800 transition duration-300 shadow-md" onclick="playActionSound();">Añadir Colchón</button>
+            </form>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">Gestionar Colchones Existentes</h3>
+            <div id="adminProductsList" class="space-y-4">
+                </div>
+        </div>
+    </section>
+
+    <div id="cartModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="playCloseSound(); closeModal('cartModal');">&times;</span>
+            <h3 class="text-3xl font-bold text-gray-800 mb-6 text-center">Tu Carrito de Compras</h3>
+            <div id="cartItems" class="space-y-4 max-h-80 overflow-y-auto pr-2">
+                <p id="emptyCartMessage" class="text-gray-500 text-center">Tu carrito está vacío.</p>
+            </div>
+            <div class="border-t border-gray-200 pt-6 mt-6 flex justify-between items-center">
+                <p class="text-xl font-semibold text-gray-700">Total:</p>
+                <p id="cartTotal" class="text-2xl font-bold text-blue-700">$0.00</p>
+            </div>
+            <button id="proceedToCheckoutButton" class="w-full bg-blue-700 text-white py-3 rounded-lg mt-8 text-lg font-semibold hover:bg-blue-800 transition duration-300 shadow-md" onclick="playActionSound(); showModal('checkoutModal');">Proceder al Pago</button>
+        </div>
+    </div>
+
+    <div id="favoritesModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="playCloseSound(); closeModal('favoritesModal');">&times;</span>
+            <h3 class="text-3xl font-bold text-gray-800 mb-6 text-center">Tus Colchones Favoritos</h3>
+            <div id="favoritesItems" class="space-y-4 max-h-80 overflow-y-auto pr-2">
+                <p id="emptyFavoritesMessage" class="text-gray-500 text-center">No tienes colchones favoritos aún.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="categoryProductsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="playCloseSound(); closeModal('categoryProductsModal');">&times;</span>
+            <h3 id="categoryModalTitle" class="text-3xl font-bold text-gray-800 mb-6 text-center">Colchones en [Categoría]</h3>
+            <div id="categoryProductsContainer" class="relative w-full">
+                <div id="productsScrollContainer" class="products-scroll-container">
+                    </div>
+                </div>
+        </div>
+    </div>
+
+    <div id="checkoutModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="playCloseSound(); closeModal('checkoutModal');">&times;</span>
+            <h3 class="text-3xl font-bold text-gray-800 mb-6 text-center">Detalles de Envío y Pago</h3>
+            <form id="checkoutForm" class="space-y-6">
+                <h4 class="text-xl font-semibold text-gray-700">Dirección de Envío</h4>
+                <div>
+                    <label for="addressStreet" class="block text-gray-700 text-sm font-medium mb-2">Calle y Número:</label>
+                    <input type="text" id="addressStreet" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-700 focus:border-blue-700" required>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="addressCity" class="block text-gray-700 text-sm font-medium mb-2">Ciudad:</label>
+                        <input type="text" id="addressCity" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-700 focus:border-blue-700" required>
+                    </div>
+                    <div>
+                        <label for="addressZip" class="block text-gray-700 text-sm font-medium mb-2">Código Postal:</label>
+                        <input type="text" id="addressZip" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-700 focus:border-blue-700" required>
+                    </div>
+                </div>
+
+                <h4 class="text-xl font-semibold text-gray-700 mt-8">Información de Pago</h4>
+                <div>
+                    <label for="cardNumber" class="block text-gray-700 text-sm font-medium mb-2">Número de Tarjeta:</label>
+                    <input type="text" id="cardNumber" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-700 focus:border-blue-700" placeholder="XXXX XXXX XXXX XXXX" required pattern="[0-9]{13,19}">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="cardExpiry" class="block text-gray-700 text-sm font-medium mb-2">Fecha de Vencimiento (MM/AA):</label>
+                        <input type="text" id="cardExpiry" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-700 focus:border-blue-700" placeholder="MM/AA" required pattern="(0[1-9]|1[0-2])\/[0-9]{2}">
+                    </div>
+                    <div>
+                        <label for="cardCvv" class="block text-gray-700 text-sm font-medium mb-2">CVV:</label>
+                        <input type="text" id="cardCvv" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-700 focus:border-blue-700" placeholder="XXX" required pattern="[0-9]{3,4}">
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-blue-700 text-white py-3 rounded-lg text-lg font-semibold hover:bg-blue-800 transition duration-300 shadow-md" onclick="playActionSound();">Confirmar Compra</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="adminLoginModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="playCloseSound(); closeModal('adminLoginModal');">&times;</span>
+            <h3 class="text-3xl font-bold text-gray-800 mb-6 text-center">Acceso de Administrador</h3>
+            <form id="adminLoginForm" class="space-y-6">
+                <div>
+                    <label for="adminEmail" class="block text-gray-700 text-sm font-medium mb-2">Correo Electrónico:</label>
+                    <input type="email" id="adminEmail" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-700 focus:border-blue-700" placeholder="lalomtzdelagarza@gmail.com" required>
+                </div>
+                <div>
+                    <label for="adminPassword" class="block text-gray-700 text-sm font-medium mb-2">Contraseña:</label>
+                    <input type="password" id="adminPassword" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-700 focus:border-blue-700" placeholder="********" required>
+                </div>
+                <p id="loginMessage" class="text-red-600 text-center font-medium"></p>
+                <button type="submit" class="w-full bg-blue-700 text-white py-3 rounded-lg text-lg font-semibold hover:bg-blue-800 transition duration-300 shadow-md" onclick="playActionSound();">Iniciar Sesión</button>
+            </form>
+            <div id="adminPanel" class="hidden mt-6 p-6 bg-gray-50 border border-gray-200 rounded-lg text-center">
+                <p class="text-gray-700 text-xl font-semibold">¡Bienvenido, Administrador!</p>
+                <p class="text-gray-600 mt-2">Ahora puedes gestionar la tienda.</p>
+                <button id="adminLogoutButton" class="mt-4 bg-red-700 text-white px-6 py-2 rounded-lg hover:bg-red-800 transition duration-300" onclick="playRemoveSound(); handleAdminLogout();">Cerrar Sesión</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-gray-900 text-white p-6 text-center mt-auto shadow-inner">
+        <div class="container mx-auto">
+            <p>&copy; 2025 Descanso Perfecto. Todos los derechos reservados.</p>
+            <div class="flex justify-center space-x-4 mt-3">
+                <a href="#" class="hover:text-blue-500 transition duration-300" onclick="playNavSound();"><i class="fab fa-facebook-f"></i></a>
+                <a href="#" class="hover:text-blue-500 transition duration-300" onclick="playNavSound();"><i class="fab fa-twitter"></i></a>
+                <a href="#" class="hover:text-blue-500 transition duration-300" onclick="playNavSound();"><i class="fab fa-instagram"></i></a>
+            </div>
+        </div>
+    </footer>
+
+    <div id="chatbot-container" class="fixed left-0 top-1/2 -translate-y-1/2 w-96 bg-white rounded-xl shadow-lg p-4 z-10">
+        <div class="flex items-center justify-between border-b pb-3 mb-3">
+            <div class="flex items-center">
+                <div id="chatbot-avatar" class="w-10 h-10 mr-2 relative">
+                    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="50" cy="50" r="45" fill="#3b82f6"/>
+                        <circle class="chatbot-eye" cx="35" cy="40" r="8" fill="white"/>
+                        <circle class="chatbot-eye" cx="65" cy="40" r="8" fill="white"/>
+                        <path class="chatbot-mouth" d="M35 65 Q50 75 65 65" stroke="white" stroke-width="5" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-800">Asistente de Colchones</h3>
+            </div>
+            <button id="closeChatbot" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+        </div>
+        <div id="chatbot-messages" class="h-64 overflow-y-auto mb-3 pr-2 flex flex-col space-y-2">
+            <div class="flex items-start">
+                <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-xs mr-2">AI</div>
+                <div class="message-bubble bot">
+                    <p>¡Hola! Soy tu asistente de colchones. Pregúntame lo que quieras sobre nuestros productos.</p>
+                </div>
+            </div>
+        </div>
+        <div id="quick-questions" class="flex flex-wrap gap-2 mb-3">
+            <button class="bg-gray-200 text-gray-700 text-sm px-3 py-1 rounded-full hover:bg-gray-300 transition duration-200 quick-question-btn">¿Qué colchón es mejor para la espalda?</button>
+            <button class="bg-gray-200 text-gray-700 text-sm px-3 py-1 rounded-full hover:bg-gray-300 transition duration-200 quick-question-btn">¿Cuánto dura un colchón?</button>
+            <button class="bg-gray-200 text-gray-700 text-sm px-3 py-1 rounded-full hover:bg-gray-300 transition duration-200 quick-question-btn">¿Tienen envío a domicilio?</button>
+            <button class="bg-gray-200 text-gray-700 text-sm px-3 py-1 rounded-full hover:bg-gray-300 transition duration-200 quick-question-btn">¿Qué tipo de colchones ofrecen?</button>
+            <button class="bg-gray-200 text-gray-700 text-sm px-3 py-1 rounded-full hover:bg-gray-300 transition duration-200 quick-question-btn">¿Cómo limpiar un colchón?</button>
+            <button class="bg-gray-200 text-gray-700 text-sm px-3 py-1 rounded-full hover:bg-gray-300 transition duration-200 quick-question-btn">¿Ofrecen garantía?</button>
+        </div>
+        <div class="flex">
+            <input type="text" id="chatbot-input" class="flex-grow p-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Escribe tu pregunta...">
+            <button id="chatbot-send" class="bg-blue-700 text-white px-4 py-2 rounded-r-lg hover:bg-blue-800 transition duration-300">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <button id="openChatbotFloating" class="fixed bottom-6 left-6 bg-blue-700 text-white p-4 rounded-full shadow-lg z-20">
+        <i class="fas fa-comments text-2xl"></i>
+    </button>
+
+    <script>
+        // Datos de productos
+        let products = JSON.parse(localStorage.getItem('products')) || [
+            { id: 1, name: 'Colchón Ortopédico Firme', price: 599.99, image: 'https://placehold.co/400x300/f5f5f5/000?text=Ortopedico', category: 'Colchones Ortopédicos' },
+            { id: 2, name: 'Colchón Viscoelástico Confort', price: 749.99, image: 'https://placehold.co/400x300/f5f5f5/000?text=Viscoelastico', category: 'Colchones Viscoelásticos' },
+            { id: 3, name: 'Colchón de Muelles Ensacados', price: 679.99, image: 'https://placehold.co/400x300/f5f5f5/000?text=Muelles', category: 'Colchones de Muelles' },
+            { id: 4, name: 'Colchón Híbrido Premium', price: 899.99, image: 'https://placehold.co/400x300/f5f5f5/000?text=Hibrido', category: 'Colchones Híbridos' },
+            { id: 5, name: 'Colchón de Látex Natural', price: 829.99, image: 'https://placehold.co/400x300/f5f5f5/000?text=Latex', category: 'Colchones de Látex' },
+            { id: 6, name: 'Colchón para Niños', price: 349.99, image: 'https://placehold.co/400x300/f5f5f5/000?text=Niños', category: 'Colchones Infantiles' },
+            { id: 7, name: 'Almohada de Espuma Viscoelástica', price: 49.99, image: 'https://placehold.co/400x300/f5f5f5/000?text=Almohada+Visco', category: 'Almohadas' },
+            { id: 8, name: 'Almohada de Plumas Suave', price: 39.99, image: 'https://placehold.co/400x300/f5f5f5/000?text=Almohada+Plumas', category: 'Almohadas' },
+            { id: 9, name: 'Combo Descanso Total (Colchón + Almohada)', price: 799.99, image: 'https://placehold.co/400x300/f5f5f5/000?text=Combo+Total', category: 'Combos' },
+            { id: 10, name: 'Oferta Especial: Colchón Viscoelástico', price: 650.00, image: 'https://placehold.co/400x300/f5f5f5/000?text=Oferta+Visco', category: 'Ofertas' },
+            { id: 11, name: 'Almohada Cervical Ergonómica', price: 59.99, image: 'https://placehold.co/400x300/f5f5f5/000?text=Almohada+Cervical', category: 'Almohadas' },
+            { id: 12, name: 'Combo Familiar (2 Colchones + 4 Almohadas)', price: 1500.00, image: 'https://placehold.co/400x300/f5f5f5/000?text=Combo+Familiar', category: 'Combos' },
+            { id: 13, name: 'Oferta de Verano: Colchón Híbrido', price: 750.00, image: 'https://placehold.co/400x300/f5f5f5/000?text=Oferta+Verano', category: 'Ofertas' },
+        ];
+
+        // Datos simulados para estadísticas de ventas
+        let salesData = JSON.parse(localStorage.getItem('salesData')) || {
+            totalSalesAmount: 0,
+            productSalesCount: {}, // { productId: count }
+            purchaseHistory: [] // [{ items: [], total: 0, date: 'YYYY-MM-DD', address: '' }]
+        };
+
+        let cart = JSON.parse(localStorage.getItem('cart')) || []; // Cargar carrito desde localStorage
+        let favorites = JSON.parse(localStorage.getItem('favorites')) || []; // Cargar favoritos desde localStorage
+        let isAdminLoggedIn = false;
+
+        // Credenciales de administrador (NO SEGURO PARA PRODUCCIÓN)
+        const ADMIN_EMAIL = 'lalomtzdelagarza@gmail.com';
+        const ADMIN_PASSWORD = 'Waro4080%';
+
+        // Referencias a elementos del DOM
+        const categoryContent = document.getElementById('categoryContent'); // Contenido de categorías
+        const contactContent = document.getElementById('contactContent'); // Contenido de contacto
+        const adminDashboard = document.getElementById('adminDashboard');
+        const categoriesGrid = document.getElementById('categoriesGrid'); // Nuevo elemento para las categorías
+        const cartButton = document.getElementById('cartButton');
+        const cartModal = document.getElementById('cartModal');
+        const cartItemsContainer = document.getElementById('cartItems');
+        const cartTotalSpan = document.getElementById('cartTotal');
+        const cartItemCountSpan = document.getElementById('cartItemCount');
+        const emptyCartMessage = document.getElementById('emptyCartMessage');
+        const proceedToCheckoutButton = document.getElementById('proceedToCheckoutButton');
+
+        const favoritesButton = document.getElementById('favoritesButton');
+        const favoritesModal = document.getElementById('favoritesModal');
+        const favoritesItemsContainer = document.getElementById('favoritesItems');
+        const emptyFavoritesMessage = document.getElementById('emptyFavoritesMessage');
+        const favoritesItemCountSpan = document.getElementById('favoritesItemCount');
+
+        const categoryProductsModal = document.getElementById('categoryProductsModal'); // Nuevo modal
+        const categoryModalTitle = document.getElementById('categoryModalTitle'); // Título del modal de categoría
+        const categoryProductsContainer = document.getElementById('categoryProductsContainer'); // Contenedor principal de productos
+        const productsScrollContainer = document.getElementById('productsScrollContainer'); // Contenedor de desplazamiento de productos
+
+        const checkoutModal = document.getElementById('checkoutModal');
+        const checkoutForm = document.getElementById('checkoutForm');
+
+        const adminLoginButton = document.getElementById('adminLoginButton');
+        const adminLoginModal = document.getElementById('adminLoginModal');
+        const adminLoginForm = document.getElementById('adminLoginForm');
+        const adminEmailInput = document.getElementById('adminEmail');
+        const adminPasswordInput = document.getElementById('adminPassword');
+        const loginMessage = document.getElementById('loginMessage');
+        const adminPanel = document.getElementById('adminPanel');
+        const adminLogoutButton = document.getElementById('adminLogoutButton');
+
+        // Elementos del formulario de contacto
+        const contactForm = document.getElementById('contactForm');
+        const contactMessageInput = document.getElementById('contactMessage');
+        const contactEmailInput = document.getElementById('contactEmail');
+
+        // Elementos del panel de administrador
+        const totalSalesSpan = document.getElementById('totalSales');
+        const mostSoldMattressSpan = document.getElementById('mostSoldMattress');
+        const addProductForm = document.getElementById('addProductForm');
+        const newProductNameInput = document.getElementById('newProductName');
+        const newProductPriceInput = document.getElementById('newProductPrice');
+        const newProductImageInput = document.getElementById('newProductImage');
+        const newProductCategorySelect = document.getElementById('newProductCategory'); // Nuevo select de categoría
+        const adminProductsList = document.getElementById('adminProductsList');
+
+        // Instancia de Chart.js
+        let salesChartInstance = null;
+
+        // --- Configuración de Tone.js para efectos de sonido ---
+        // Configuración de un sintetizador general para los sonidos
+        const synth = new Tone.Synth({
+            oscillator: {
+                type: "sine" // Forma de onda simple
+            },
+            envelope: {
+                attack: 0.005, // Ataque muy rápido
+                decay: 0.1,   // Decaimiento rápido
+                sustain: 0.01, // Sustain muy corto
+                release: 0.2  // Liberación rápida
+            }
+        }).toDestination();
+
+        // Funciones para reproducir diferentes sonidos
+        function playNavSound() {
+            if (Tone.context.state !== 'running') { Tone.start(); }
+            synth.triggerAttackRelease("C5", "16n"); // Nota media, corta
+        }
+
+        function playActionSound() {
+            if (Tone.context.state !== 'running') { Tone.start(); }
+            synth.triggerAttackRelease("E5", "16n"); // Nota un poco más alta, corta
+        }
+
+        function playRemoveSound() {
+            if (Tone.context.state !== 'running') { Tone.start(); }
+            synth.triggerAttackRelease("A4", "16n"); // Nota más baja, corta
+        }
+
+        function playCloseSound() {
+            if (Tone.context.state !== 'running') { Tone.start(); }
+            synth.triggerAttackRelease("G4", "32n"); // Nota baja, muy corta
+        }
+
+        // --- Funciones de Utilidad de UI ---
+        function showModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.style.display = 'flex';
+            // Forzar un reflow para asegurar que display:flex se aplique antes de la transición
+            modal.offsetWidth;
+            modal.classList.add('show');
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.remove('show');
+            // Esperar a que la transición termine antes de ocultar el modal
+            modal.addEventListener('transitionend', function handler() {
+                modal.style.display = 'none';
+                modal.removeEventListener('transitionend', handler); // Eliminar el listener después de usarlo
+            }, { once: true }); // Asegurarse de que solo se ejecute una vez
+            if (modalId === 'adminLoginModal') {
+                loginMessage.textContent = ''; // Limpiar mensaje de inicio de sesión al cerrar
+                adminLoginForm.reset(); // Resetear formulario al cerrar
+            }
+            if (modalId === 'checkoutModal') {
+                checkoutForm.reset(); // Resetear formulario de pago
+            }
+        }
+
+        function hideAllContentSections() {
+            categoryContent.style.display = 'none';
+            adminDashboard.style.display = 'none';
+            contactContent.style.display = 'none';
+        }
+
+        function showCategoryContent() {
+            hideAllContentSections();
+            categoryContent.style.display = 'block';
+        }
+
+        function showAdminDashboard() {
+            hideAllContentSections();
+            adminDashboard.style.display = 'block';
+            populateCategorySelect(); // Llenar el select de categorías en el administrador
+            renderAdminProducts();
+            updateAdminStats();
+            updateSalesChart(); // Actualizar la gráfica de ventas al entrar al administrador
+        }
+
+        function showContactContent() {
+            hideAllContentSections();
+            contactContent.style.display = 'block';
+        }
+
+        // --- Funciones de Productos (Cliente) ---
+        function getUniqueCategories() {
+            const categories = products.map(product => product.category);
+            return [...new Set(categories)].sort(); // Obtener únicas y ordenar
+        }
+
+        function renderCategoryBlocks() {
+            categoriesGrid.innerHTML = ''; // Limpiar la cuadrícula
+            const uniqueCategories = getUniqueCategories();
+
+            if (uniqueCategories.length === 0) {
+                categoriesGrid.innerHTML = '<p class="text-gray-500 text-center col-span-full">No hay categorías de colchones disponibles.</p>';
+                return;
+            }
+
+            uniqueCategories.forEach(category => {
+                // Puedes asignar un icono diferente a cada categoría si lo deseas
+                let iconClass = 'fas fa-bed'; // Icono por defecto
+                if (category.includes('Almohadas')) iconClass = 'fas fa-pillow';
+                else if (category.includes('Combos')) iconClass = 'fas fa-box-open';
+                else if (category.includes('Ofertas')) iconClass = 'fas fa-tag';
+                else if (category.includes('Ortopédicos')) iconClass = 'fas fa-bone';
+                else if (category.includes('Viscoelásticos')) iconClass = 'fas fa-cloud';
+                else if (category.includes('Muelles')) iconClass = 'fas fa-spring';
+                else if (category.includes('Híbridos')) iconClass = 'fas fa-layer-group';
+                else if (category.includes('Látex')) iconClass = 'fas fa-leaf';
+                else if (category.includes('Infantiles')) iconClass = 'fas fa-child';
+
+                const categoryBlock = `
+                    <div class="bg-white rounded-2xl shadow-md overflow-hidden category-block" data-category="${category}" onclick="playNavSound();">
+                        <i class="${iconClass}"></i>
+                        <h3 class="text-2xl font-semibold text-gray-900">${category}</h3>
+                    </div>
+                `;
+                categoriesGrid.innerHTML += categoryBlock;
+            });
+
+            // Añadir event listeners a los bloques de categoría
+            document.querySelectorAll('.category-block').forEach(block => {
+                block.addEventListener('click', (event) => {
+                    const category = event.currentTarget.dataset.category;
+                    renderProductsByCategory(category);
+                });
+            });
+        }
+
+        // --- Funciones de Productos por Categoría (Ahora con desplazamiento horizontal) ---
+        function renderProductsByCategory(category) {
+            categoryModalTitle.textContent = `Productos en ${category}`;
+            productsScrollContainer.innerHTML = ''; // Limpiar el contenedor de desplazamiento
+
+            const currentCategoryProducts = products.filter(p => p.category === category);
+
+            if (currentCategoryProducts.length === 0) {
+                productsScrollContainer.innerHTML = '<p class="text-gray-500 text-center w-full py-8">No hay productos en esta categoría.</p>';
+                showModal('categoryProductsModal');
+                return;
+            }
+
+            currentCategoryProducts.forEach((product, index) => {
+                const isFavorited = favorites.some(fav => fav.id === product.id);
+                const favoriteClass = isFavorited ? 'fas fa-heart favorited' : 'far fa-heart';
+
+                const productCardHtml = `
+                    <div class="product-card-wrapper">
+                        <div class="bg-white rounded-2xl shadow-md overflow-hidden product-card relative w-full h-full">
+                            <button class="favorite-button" data-product-id="${product.id}" onclick="playActionSound();">
+                                <i class="${favoriteClass}"></i>
+                            </button>
+                            <img src="${product.image}" alt="${product.name}" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/400x300/f5f5f5/000?text=Imagen+No+Disponible';">
+                            <div class="p-6">
+                                <h3 class="text-xl font-semibold text-gray-900 mb-2">${product.name}</h3>
+                                <p class="text-gray-600 mb-4">Categoría: ${product.category}.</p>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-2xl font-bold text-blue-700">$${product.price.toFixed(2)}</span>
+                                    <button class="bg-blue-700 text-white px-5 py-2 rounded-full hover:bg-blue-800 transition duration-300 shadow-md add-to-cart-btn" data-product-id="${product.id}" onclick="playActionSound();">
+                                        <i class="fas fa-cart-plus mr-2"></i>Añadir
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                productsScrollContainer.innerHTML += productCardHtml;
+            });
+
+            showModal('categoryProductsModal');
+
+            // Volver a adjuntar listeners para botones dentro del contenedor de desplazamiento
+            document.querySelectorAll('#productsScrollContainer .add-to-cart-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const productId = parseInt(event.currentTarget.dataset.productId);
+                    addToCart(productId);
+                });
+            });
+            document.querySelectorAll('#productsScrollContainer .favorite-button').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const productId = parseInt(event.currentTarget.dataset.productId);
+                    toggleFavorite(productId);
+                });
+            });
+        }
+
+        // Las funciones showCarouselItem y navigateCarousel ya no son necesarias y han sido eliminadas.
+
+
+        // --- Funciones del Carrito ---
+        function addToCart(productId) {
+            const product = products.find(p => p.id === productId);
+            if (product) {
+                const existingItem = cart.find(item => item.id === productId);
+                if (existingItem) {
+                    existingItem.quantity++;
+                } else {
+                    cart.push({ ...product, quantity: 1 });
+                }
+                saveCart();
+                updateCartDisplay();
+                showCustomMessage(`"${product.name}" añadido al carrito!`, 'success');
+            }
+        }
+
+        function removeFromCart(productId) {
+            cart = cart.filter(item => item.id !== productId);
+            saveCart();
+            updateCartDisplay();
+            showCustomMessage('Artículo eliminado del carrito.', 'info');
+        }
+
+        function updateCartDisplay() {
+            cartItemsContainer.innerHTML = '';
+            let total = 0;
+
+            if (cart.length === 0) {
+                emptyCartMessage.style.display = 'block';
+                proceedToCheckoutButton.disabled = true; // Deshabilitar botón si el carrito está vacío
+                proceedToCheckoutButton.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                emptyCartMessage.style.display = 'none';
+                proceedToCheckoutButton.disabled = false; // Habilitar botón
+                proceedToCheckoutButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                cart.forEach(item => {
+                    const itemHtml = `
+                        <div class="flex items-center justify-between border-b border-gray-100 pb-4 mb-4">
+                            <div class="flex items-center">
+                                <img src="${item.image}" alt="${item.name}" class="w-16 h-16 object-cover rounded-lg mr-4" onerror="this.onerror=null;this.src='https://placehold.co/64x64/f5f5f5/000?text=Prod';">
+                                <div>
+                                    <p class="font-semibold text-gray-800">${item.name}</p>
+                                    <p class="text-sm text-gray-600">Cantidad: ${item.quantity}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="font-bold text-gray-900 mr-4">$${(item.price * item.quantity).toFixed(2)}</span>
+                                <button class="text-red-700 hover:text-red-800 transition duration-300 remove-from-cart-btn" data-product-id="${item.id}" onclick="playRemoveSound();">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    cartItemsContainer.innerHTML += itemHtml;
+                    total += item.price * item.quantity;
+                });
+            }
+
+            cartTotalSpan.textContent = `$${total.toFixed(2)}`;
+            cartItemCountSpan.textContent = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+            // Añadir event listeners a los botones "Eliminar del carrito"
+            document.querySelectorAll('.remove-from-cart-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const productId = parseInt(event.currentTarget.dataset.productId);
+                    removeFromCart(productId);
+                });
+            });
+        }
+
+        function saveCart() {
+            localStorage.setItem('cart', JSON.stringify(cart));
+        }
+
+        // --- Funciones de Favoritos ---
+        function toggleFavorite(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+
+            const isFavorited = favorites.some(fav => fav.id === productId);
+            if (isFavorited) {
+                favorites = favorites.filter(fav => fav.id !== productId);
+                showCustomMessage(`"${product.name}" eliminado de favoritos.`, 'info');
+            } else {
+                favorites.push(product);
+                showCustomMessage(`"${product.name}" añadido a favoritos!`, 'success');
+            }
+            saveFavorites();
+            updateFavoritesDisplay();
+            // Volver a renderizar productos en la vista actual (categorías o modal de categoría)
+            if (categoryContent.style.display === 'block') {
+                renderCategoryBlocks(); // Si estamos en la vista de categorías, no hay productos individuales
+            } else if (categoryProductsModal.classList.contains('show')) {
+                // Si el modal de categoría está abierto, volver a renderizar sus productos para actualizar el corazón
+                renderProductsByCategory(categoryModalTitle.textContent.replace('Productos en ', '')); // Ajustado para el nuevo título
+            }
+        }
+
+        function removeFromFavorites(productId) {
+            const product = products.find(p => p.id === productId);
+            favorites = favorites.filter(fav => fav.id !== productId);
+            saveFavorites();
+            updateFavoritesDisplay();
+            // Volver a renderizar productos en la vista actual (categorías o modal de categoría)
+            if (categoryContent.style.display === 'block') {
+                renderCategoryBlocks();
+            } else if (categoryProductsModal.classList.contains('show')) {
+                renderProductsByCategory(categoryModalTitle.textContent.replace('Productos en ', '')); // Ajustado para el nuevo título
+            }
+            showCustomMessage(`"${product.name}" eliminado de favoritos.`, 'info');
+        }
+
+        function updateFavoritesDisplay() {
+            favoritesItemsContainer.innerHTML = '';
+            if (favorites.length === 0) {
+                emptyFavoritesMessage.style.display = 'block';
+            } else {
+                emptyFavoritesMessage.style.display = 'none';
+                favorites.forEach(item => {
+                    const itemHtml = `
+                        <div class="flex items-center justify-between border-b border-gray-100 pb-4 mb-4">
+                            <div class="flex items-center">
+                                <img src="${item.image}" alt="${item.name}" class="w-16 h-16 object-cover rounded-lg mr-4" onerror="this.onerror=null;this.src='https://placehold.co/64x64/f5f5f5/000?text=Prod';">
+                                <div>
+                                    <p class="font-semibold text-gray-800">${item.name}</p>
+                                    <p class="text-sm text-gray-600">$${item.price.toFixed(2)}</p>
+                                </div>
+                            </div>
+                            <button class="text-red-700 hover:text-red-800 transition duration-300 remove-from-favorites-btn" data-product-id="${item.id}" onclick="playRemoveSound();">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    `;
+                    favoritesItemsContainer.innerHTML += itemHtml;
+                });
+            }
+            favoritesItemCountSpan.textContent = favorites.length;
+
+            document.querySelectorAll('.remove-from-favorites-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const productId = parseInt(event.currentTarget.dataset.productId);
+                    removeFromFavorites(productId);
+                });
+            });
+        }
+
+        function saveFavorites() {
+            localStorage.setItem('favorites', JSON.stringify(favorites));
+        }
+
+        // --- Funciones de Mensajes Personalizados (sin alert()) ---
+        function showCustomMessage(message, type = 'info') {
+            const messageBox = document.createElement('div');
+            messageBox.textContent = message;
+            messageBox.className = `fixed bottom-6 right-6 p-4 rounded-lg shadow-lg text-white z-50 transition-all duration-300 transform translate-y-full opacity-0`;
+
+            if (type === 'success') {
+                messageBox.classList.add('bg-green-700'); /* Color de éxito */
+            } else if (type === 'error') {
+                messageBox.classList.add('bg-red-700');
+            } else {
+                messageBox.classList.add('bg-blue-700'); /* Color de información */
+            }
+
+            document.body.appendChild(messageBox);
+
+            // Animación de entrada
+            setTimeout(() => {
+                messageBox.classList.remove('translate-y-full', 'opacity-0');
+                messageBox.classList.add('translate-y-0', 'opacity-100');
+            }, 50);
+
+            // Animación de salida y eliminación
+            setTimeout(() => {
+                messageBox.classList.remove('translate-y-0', 'opacity-100');
+                messageBox.classList.add('translate-y-full', 'opacity-0');
+                messageBox.addEventListener('transitionend', () => messageBox.remove());
+            }, 3000);
+        }
+
+        // --- Funciones de Contacto ---
+        function handleContactFormSubmit(event) {
+            event.preventDefault();
+            const message = contactMessageInput.value;
+            const email = contactEmailInput.value;
+
+            console.log(`Mensaje de contacto recibido de ${email}:`);
+            console.log(message);
+
+            // --- IMPORTANTE ---
+            // Aquí es donde en un sitio web real se enviaría el mensaje a un servidor.
+            // El servidor lo guardaría en una base de datos y/o lo reenviaría a tu correo electrónico.
+            // Y luego, el servidor podría enviar una confirmación al correo del usuario.
+            // Como esto es un proyecto de frontend, simulamos el envío.
+
+            showCustomMessage(`¡Mensaje recibido! Te enviaremos una confirmación a ${email} pronto.`, 'success');
+
+            // Limpiar el formulario
+            contactForm.reset();
+        }
+
+        // --- Funciones de Administración ---
+        function handleAdminLogin(event) {
+            event.preventDefault();
+            // Importante: Usar .trim() para eliminar espacios en blanco accidentales
+            const email = adminEmailInput.value.trim();
+            const password = adminPasswordInput.value.trim();
+
+            if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+                isAdminLoggedIn = true;
+                loginMessage.textContent = '';
+                closeModal('adminLoginModal'); // Cerrar el modal de inicio de sesión
+                showAdminDashboard(); // Mostrar el panel de administrador
+                showCustomMessage('Inicio de sesión de administrador exitoso!', 'success');
+            } else {
+                isAdminLoggedIn = false;
+                loginMessage.textContent = 'Correo o contraseña incorrectos.';
+                showCustomMessage('Error de inicio de sesión.', 'error');
+            }
+        }
+
+        function handleAdminLogout() {
+            isAdminLoggedIn = false;
+            showCategoryContent(); // Volver a la vista de categorías
+            adminEmailInput.value = '';
+            adminPasswordInput.value = '';
+            loginMessage.textContent = '';
+            showCustomMessage('Sesión de administrador cerrada.', 'info');
+        }
+
+        function populateCategorySelect() {
+            newProductCategorySelect.innerHTML = '<option value="">Selecciona una categoría</option>'; // Restablecer
+            const uniqueCategories = getUniqueCategories();
+            uniqueCategories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                newProductCategorySelect.appendChild(option);
+            });
+            // Opción para añadir una nueva categoría (si se desea)
+            const newOption = document.createElement('option');
+            newOption.value = 'Nueva Categoría';
+            newOption.textContent = 'Añadir Nueva Categoría...';
+            newProductCategorySelect.appendChild(newOption);
+        }
+
+        function addProduct(name, price, image, category) {
+            const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
+            const newProduct = { id: newId, name, price: parseFloat(price), image, category };
+            products.push(newProduct);
+            saveProducts();
+            renderCategoryBlocks(); // Actualizar la vista de categorías
+            renderAdminProducts(); // Actualizar la vista del administrador
+            populateCategorySelect(); // Actualizar select de categorías
+            showCustomMessage(`Colchón "${name}" añadido a la categoría "${category}".`, 'success');
+        }
+
+        function removeProduct(productId) {
+            products = products.filter(p => p.id !== productId);
+            // También eliminar de favoritos si estaba allí
+            favorites = favorites.filter(fav => fav.id !== productId);
+            saveFavorites();
+            saveProducts();
+            renderCategoryBlocks(); // Actualizar la vista de categorías
+            renderAdminProducts(); // Actualizar la vista del administrador
+            updateFavoritesDisplay(); // Asegurarse de que los favoritos se actualicen
+            populateCategorySelect(); // Actualizar select de categorías
+            showCustomMessage('Colchón eliminado.', 'info');
+        }
+
+        function saveProducts() {
+            localStorage.setItem('products', JSON.stringify(products));
+        }
+
+        function loadProducts() {
+            const storedProducts = localStorage.getItem('products');
+            if (storedProducts) {
+                products = JSON.parse(storedProducts);
+            }
+        }
+
+        function renderAdminProducts() {
+            adminProductsList.innerHTML = '';
+            if (products.length === 0) {
+                adminProductsList.innerHTML = '<p class="text-gray-500 text-center">No hay colchones para gestionar.</p>';
+                return;
+            }
+            // Ordenar productos por categoría para una mejor gestión en el administrador
+            const sortedProducts = [...products].sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
+
+            sortedProducts.forEach(product => {
+                const productItem = `
+                    <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg shadow-sm">
+                        <div class="flex items-center">
+                            <img src="${product.image}" alt="${product.name}" class="w-16 h-16 object-cover rounded-lg mr-4" onerror="this.onerror=null;this.src='https://placehold.co/64x64/f5f5f5/000?text=Prod';">
+                            <div>
+                                <p class="font-semibold text-gray-800">${product.name} <span class="text-sm text-gray-500">(${product.category})</span></p>
+                                <p class="text-sm text-gray-600">$${product.price.toFixed(2)}</p>
+                            </div>
+                        </div>
+                        <button class="bg-red-700 text-white px-4 py-2 rounded-full hover:bg-red-800 transition duration-300 remove-admin-product-btn" data-product-id="${product.id}" onclick="playRemoveSound();">
+                            <i class="fas fa-trash-alt mr-2"></i>Quitar
+                        </button>
+                    </div>
+                `;
+                adminProductsList.innerHTML += productItem;
+            });
+
+            document.querySelectorAll('.remove-admin-product-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const productId = parseInt(event.currentTarget.dataset.productId);
+                    removeProduct(productId);
+                });
+            });
+        }
+
+        function updateAdminStats() {
+            totalSalesSpan.textContent = `$${salesData.totalSalesAmount.toFixed(2)}`;
+
+            let maxSalesCount = 0;
+            let mostSoldProductId = null;
+
+            for (const productId in salesData.productSalesCount) {
+                if (salesData.productSalesCount[productId] > maxSalesCount) {
+                    maxSalesCount = salesData.productSalesCount[productId];
+                    mostSoldProductId = parseInt(productId);
+                }
+            }
+
+            if (mostSoldProductId) {
+                const mostSoldProduct = products.find(p => p.id === mostSoldProductId);
+                if (mostSoldProduct) {
+                    mostSoldMattressSpan.textContent = `${mostSoldProduct.name} (${maxSalesCount} unidades)`;
+                } else {
+                    mostSoldMattressSpan.textContent = 'Producto no encontrado (ID: ' + mostSoldProductId + ')';
+                }
+            } else {
+                mostSoldMattressSpan.textContent = 'N/A (sin ventas)';
+            }
+        }
+
+        function recordSale() {
+            let currentTotal = 0;
+            const purchasedItems = [];
+            const today = new Date().toISOString().split('T')[0]; // Obtener la fecha en formato YYYY-MM-DD
+
+            cart.forEach(item => {
+                currentTotal += item.price * item.quantity;
+                purchasedItems.push({ id: item.id, name: item.name, quantity: item.quantity, price: item.price, category: item.category });
+
+                // Actualizar el conteo de ventas del producto
+                if (salesData.productSalesCount[item.id]) {
+                    salesData.productSalesCount[item.id] += item.quantity;
+                } else {
+                    salesData.productSalesCount[item.id] = item.quantity;
+                }
+            });
+
+            salesData.totalSalesAmount += currentTotal;
+            salesData.purchaseHistory.push({
+                items: purchasedItems,
+                total: currentTotal,
+                date: today, // Almacenar la fecha como YYYY-MM-DD
+                // La dirección se añadirá desde el formulario de pago
+            });
+            localStorage.setItem('salesData', JSON.stringify(salesData));
+        }
+
+        // --- Funciones de Chart.js ---
+        function updateSalesChart() {
+            const ctx = document.getElementById('salesChart').getContext('2d');
+
+            // Agrupar datos para el gráfico
+            const salesByDateAndProduct = {}; // { 'YYYY-MM-DD': { 'NombreProducto': conteo } }
+            const allDates = new Set();
+            const allProductNames = new Set();
+
+            salesData.purchaseHistory.forEach(purchase => {
+                const date = purchase.date;
+                allDates.add(date);
+                if (!salesByDateAndProduct[date]) {
+                    salesByDateAndProduct[date] = {};
+                }
+                purchase.items.forEach(item => {
+                    allProductNames.add(item.name);
+                    if (salesByDateAndProduct[date][item.name]) {
+                        salesByDateAndProduct[date][item.name] += item.quantity;
+                    } else {
+                        salesByDateAndProduct[date][item.name] = item.quantity;
+                    }
+                });
+            });
+
+            const sortedDates = Array.from(allDates).sort();
+            const productNamesArray = Array.from(allProductNames).sort();
+
+            const datasets = productNamesArray.map(productName => {
+                const data = sortedDates.map(date => {
+                    return salesByDateAndProduct[date][productName] || 0;
+                });
+
+                // Generar un color aleatorio para cada línea de producto
+                const randomColor = `rgba(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, 1)`;
+
+                return {
+                    label: productName,
+                    data: data,
+                    borderColor: randomColor,
+                    backgroundColor: randomColor.replace('1)', '0.2)'), // Relleno más claro
+                    fill: false,
+                    tension: 0.1 // Líneas suaves
+                };
+            });
+
+            if (salesChartInstance) {
+                salesChartInstance.destroy(); // Destruir la instancia del gráfico anterior
+            }
+
+            salesChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: sortedDates,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Ventas por Producto a lo largo del Tiempo'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += context.parsed.y + ' unidades';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'category', // Usar 'category' para cadenas de fecha
+                            title: {
+                                display: true,
+                                text: 'Fecha'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Unidades Vendidas'
+                            },
+                            ticks: {
+                                precision: 0 // Asegurar ticks enteros para unidades
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+
+        // --- Lógica del Chatbot ---
+        const chatbotContainer = document.getElementById('chatbot-container');
+        const chatbotMessages = document.getElementById('chatbot-messages');
+        const chatbotInput = document.getElementById('chatbot-input');
+        const chatbotSendBtn = document.getElementById('chatbot-send');
+        const closeChatbotBtn = document.getElementById('closeChatbot');
+        const openChatbotFloatingBtn = document.getElementById('openChatbotFloating');
+        const chatbotAvatar = document.getElementById('chatbot-avatar');
+        const quickQuestionsContainer = document.getElementById('quick-questions'); // Nuevo
+
+        // Sintetizador para sonidos del chatbot
+        const chatbotSynth = new Tone.Synth({
+            oscillator: { type: "triangle" },
+            envelope: { attack: 0.01, decay: 0.1, sustain: 0.05, release: 0.1 }
+        }).toDestination();
+
+        // Función para reproducir el sonido "beep beep boop"
+        function playBotSpeakingSound() {
+            if (Tone.context.state !== 'running') { Tone.start(); }
+
+            // Definir las notas y duraciones para "beep beep boop"
+            const notes = ["C4", "E4", "G4"]; // Beep, beep, boop
+            const durations = ["8n", "8n", "4n"]; // Corta, corta, ligeramente más larga
+
+            let time = Tone.context.currentTime;
+            for (let i = 0; i < notes.length; i++) {
+                synth.triggerAttackRelease(notes[i], durations[i], time);
+                time += Tone.Time(durations[i]).toSeconds(); // Avanzar el tiempo para la siguiente nota
+            }
+        }
+
+        const chatbotQuestions = [
+            {
+                keywords: ["dolor de espalda", "espalda", "ortopédico"],
+                answer: "Para el dolor de espalda, los colchones ortopédicos o viscoelásticos suelen ser los más recomendados, ya que ofrecen un buen soporte y alivian la presión."
+            },
+            {
+                keywords: ["dura", "vida útil", "duración"],
+                answer: "La vida útil de un colchón varía, pero generalmente se recomienda reemplazarlo cada 7 a 10 años, dependiendo del material y el uso."
+            },
+            {
+                keywords: ["diferencia", "viscoelástico", "muelles", "tipos"],
+                answer: "Ofrecemos varios tipos de colchones: <ul><li><b>Viscoelásticos:</b> Se adaptan a tu cuerpo, ideales para alivio de presión.</li><li><b>De Muelles Ensacados:</b> Proporcionan firmeza y buena transpirabilidad.</li><li><b>Ortopédicos:</b> Diseñados para soporte y alivio de dolor de espalda.</li><li><b>Híbridos:</b> Combinan lo mejor de diferentes materiales.</li><li><b>De Látex:</b> Naturales, duraderos y con buena ventilación.</li><li><b>Infantiles:</b> Específicos para el crecimiento de los niños.</li></ul>"
+            },
+            {
+                keywords: ["envío", "domicilio", "entrega", "costo de envío"],
+                answer: "Sí, ofrecemos envío a domicilio en todas nuestras compras. El costo de envío puede variar según tu ubicación. Te invitamos a consultar nuestra sección de contacto o a simular una compra para ver los detalles."
+            },
+            {
+                keywords: ["garantía", "defectos"],
+                answer: "Todos nuestros colchones vienen con una garantía mínima de 5 años contra defectos de fabricación. Para más detalles sobre la garantía específica de cada modelo, por favor, revisa su descripción o contáctanos."
+            },
+            {
+                keywords: ["limpiar", "limpieza", "manchas"],
+                answer: "Para mantener tu colchón limpio, te recomendamos usar un protector de colchón. En caso de manchas, límpialas suavemente con un paño húmedo y un limpiador suave. Evita mojar demasiado el colchón y asegúrate de que se seque completamente."
+            },
+            {
+                keywords: ["devolución", "cambio", "política"],
+                answer: "Nuestra política de devoluciones permite cambios o reembolsos dentro de los 30 días posteriores a la compra, siempre que el colchón esté en perfectas condiciones. Consulta nuestra sección de Términos y Condiciones para más información."
+            },
+            {
+                keywords: ["tallas", "medidas", "tamaños"],
+                answer: "Ofrecemos colchones en una variedad de tallas estándar: individual, matrimonial, queen size y king size. Algunas categorías también pueden tener medidas especiales. Puedes ver las opciones de tamaño en la descripción de cada producto."
+            },
+            {
+                keywords: ["ofertas", "descuentos", "promociones"],
+                answer: "¡Claro! Siempre tenemos ofertas y promociones especiales. Te recomiendo visitar nuestra sección de 'Ofertas' en la página principal para ver las últimas novedades y descuentos disponibles."
+            },
+            {
+                keywords: ["firmeza", "duro", "suave", "nivel de firmeza"],
+                answer: "La firmeza ideal de un colchón depende de tus preferencias personales y tu postura al dormir. Ofrecemos colchones con diferentes niveles de firmeza: firme, medio y suave. Si tienes dudas, podemos ayudarte a elegir el adecuado para ti."
+            },
+            {
+                keywords: ["hola", "saludos", "ayuda", "qué haces"],
+                answer: "¡Hola! Soy tu asistente de colchones. Estoy aquí para resolver tus dudas sobre nuestros productos y ayudarte a encontrar el colchón perfecto. Puedes escribir tu pregunta o seleccionar una de las opciones rápidas."
+            },
+            {
+                keywords: ["gracias", "agradezco"],
+                answer: "De nada, estoy aquí para ayudarte. ¿Tienes alguna otra pregunta?"
+            },
+            {
+                keywords: ["contacto", "llamar", "teléfono", "correo"],
+                answer: "Puedes contactarnos a través de nuestro formulario en la sección 'Contáctanos', o enviarnos un correo electrónico a info@descansoperfecto.com. También puedes llamarnos al 55-1234-5678."
+            }
+        ];
+
+        function displayMessage(sender, message, type = 'text') {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('flex', 'items-start', 'mb-2');
+
+            if (sender === 'user') {
+                messageDiv.classList.add('justify-end');
+                messageDiv.innerHTML = `
+                    <div class="message-bubble user">
+                        <p>${message}</p>
+                    </div>
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center text-white font-bold text-xs ml-2">Tú</div>
+                `;
+            } else { // bot
+                messageDiv.innerHTML = `
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-xs mr-2">AI</div>
+                    <div class="message-bubble bot">
+                        <p>${message}</p>
+                    </div>
+                `;
+            }
+            chatbotMessages.appendChild(messageDiv);
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight; // Desplazar al final
+        }
+
+        async function processChatbotMessage(message) {
+            const lowerCaseMessage = message.toLowerCase();
+            let response = "Lo siento, no pude encontrar una respuesta directa a tu pregunta. Por favor, intenta reformularla o elige una de las preguntas rápidas para obtener ayuda.";
+
+            for (const qa of chatbotQuestions) {
+                const found = qa.keywords.some(keyword => lowerCaseMessage.includes(keyword));
+                if (found) {
+                    response = qa.answer;
+                    break;
+                }
+            }
+
+            // Simular "escribiendo"
+            chatbotAvatar.classList.add('chatbot-typing'); // Aplicar animación de "escribiendo" al contenedor del avatar
+            await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000)); // Retraso aleatorio
+
+            chatbotAvatar.classList.remove('chatbot-typing'); // Eliminar animación de "escribiendo"
+            chatbotAvatar.classList.add('chatbot-speaking'); // Aplicar animación de "hablando"
+            playBotSpeakingSound(); // Reproducir el sonido "beep beep boop"
+
+            displayMessage('bot', response);
+
+            // Eliminar animación de "hablando" después de un breve retraso
+            setTimeout(() => {
+                chatbotAvatar.classList.remove('chatbot-speaking');
+            }, 1500); // Duración ajustada para que la animación se vea bien con el sonido
+        }
+
+        chatbotSendBtn.addEventListener('click', () => {
+            const userMessage = chatbotInput.value.trim();
+            if (userMessage) {
+                displayMessage('user', userMessage);
+                chatbotInput.value = '';
+                processChatbotMessage(userMessage);
+            }
+        });
+
+        chatbotInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                chatbotSendBtn.click();
+            }
+        });
+
+        // Event listeners para los botones de preguntas rápidas
+        document.querySelectorAll('.quick-question-btn').forEach(button => {
+            button.addEventListener('click', (event) => {
+                const questionText = event.target.textContent;
+                displayMessage('user', questionText); // Mostrar la pregunta del usuario
+                processChatbotMessage(questionText); // Procesar la pregunta
+            });
+        });
+
+        // Toggle de visibilidad del chatbot
+        openChatbotFloatingBtn.addEventListener('click', () => {
+            chatbotContainer.classList.toggle('show'); // Alternar la clase 'show'
+            if (chatbotContainer.classList.contains('show')) {
+                playNavSound();
+            } else {
+                playCloseSound();
+            }
+        });
+
+        closeChatbotBtn.addEventListener('click', () => {
+            chatbotContainer.classList.remove('show');
+            playCloseSound();
+        });
+
+        // --- Event listeners de inicialización ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadProducts(); // Cargar productos al inicio
+            renderCategoryBlocks(); // Renderizar las categorías al inicio
+            updateCartDisplay(); // Actualizar el carrito al cargar la página
+            updateFavoritesDisplay(); // Actualizar favoritos al cargar la página
+            showCategoryContent(); // Asegurarse de que la vista principal (categorías) esté visible al cargar
+
+            // Mostrar el chatbot automáticamente en pantallas grandes al cargar
+            if (window.innerWidth >= 768) {
+                chatbotContainer.classList.add('show');
+            }
+
+            // Adjuntar sonidos a botones estáticos donde no estén ya definidos en HTML
+            // El botón proceedToCheckoutButton ahora tiene su onclick directamente en HTML
+            document.getElementById('checkoutForm').addEventListener('submit', (event) => {
+                console.log('handleCheckoutSubmit llamado'); // Log para depuración
+                playActionSound();
+                // Llamar a handleCheckoutSubmit después de que suene el sonido
+                handleCheckoutSubmit(event);
+            });
+
+            // Listener de evento corregido para addProductForm
+            document.getElementById('addProductForm').addEventListener('submit', (event) => {
+                event.preventDefault(); // Prevenir el envío de formulario por defecto (recarga de página)
+                playActionSound(); // Reproducir sonido
+
+                const name = newProductNameInput.value;
+                const price = newProductPriceInput.value;
+                const image = newProductImageInput.value;
+                let category = newProductCategorySelect.value;
+
+                // Si se selecciona "Añadir Nueva Categoría...", solicitar el nombre de la nueva categoría
+                if (category === 'Nueva Categoría') {
+                    const newCategoryName = prompt('Introduce el nombre de la nueva categoría:');
+                    if (newCategoryName && newCategoryName.trim() !== '') {
+                        category = newCategoryName.trim();
+                    } else {
+                        showCustomMessage('La creación de la nueva categoría fue cancelada o el nombre no es válido.', 'error');
+                        return; // Detener la función si la creación de la categoría es cancelada
+                    }
+                }
+
+                if (name && price && category) {
+                    addProduct(name, price, image, category);
+                    // Limpiar el formulario después de añadir
+                    addProductForm.reset();
+                    // Restablecer la selección de categoría a la predeterminada
+                    populateCategorySelect();
+                } else {
+                    showCustomMessage('Por favor, rellena todos los campos obligatorios para añadir el colchón.', 'error');
+                }
+            });
+
+            document.getElementById('adminLoginForm').addEventListener('submit', handleAdminLogin); // Volver a adjuntar para el sonido de acción
+            document.getElementById('contactForm').addEventListener('submit', handleContactFormSubmit); // Volver a adjuntar para el sonido de acción
+        });
+
+        // Función separada para el envío del formulario de pago para asegurar que el sonido se reproduzca antes de la lógica
+        function handleCheckoutSubmit(event) {
+            event.preventDefault(); // Prevenir el envío de formulario por defecto (recarga de página)
+
+            // Aquí se simularía el procesamiento de pago
+            const street = document.getElementById('addressStreet').value;
+            const city = document.getElementById('addressCity').value;
+            const zip = document.getElementById('addressZip').value;
+            const cardNumber = document.getElementById('cardNumber').value;
+
+            // Registrar la venta antes de vaciar el carrito
+            recordSale();
+
+            // Añadir la dirección a la última venta registrada en el historial de compras
+            if (salesData.purchaseHistory.length > 0) {
+                salesData.purchaseHistory[salesData.purchaseHistory.length - 1].address = `${street}, ${city}, ${zip}`;
+                localStorage.setItem('salesData', JSON.stringify(salesData));
+            }
+
+            cart = []; // Vaciar el carrito
+            saveCart(); // Guardar el carrito vacío
+            updateCartDisplay(); // Actualizar la visualización del carrito
+
+            closeModal('checkoutModal'); // Cerrar el modal de pago
+            showCustomMessage('¡Gracias por tu compra! Tu producto está en proceso y en camino.', 'success');
+        }
+
+
+        // Cerrar modales al hacer clic fuera de ellos
+        window.addEventListener('click', (event) => {
+            // Comprobar si el clic está fuera de cualquier contenido del modal pero dentro del fondo del modal
+            if (event.target.classList.contains('modal') && !event.target.classList.contains('modal-content')) {
+                const openModals = document.querySelectorAll('.modal.show');
+                openModals.forEach(modal => {
+                    playCloseSound(); // Reproducir sonido al cerrar haciendo clic fuera
+                    closeModal(modal.id);
+                });
+            }
+        });
+    </script>
+</body>
+</html>
