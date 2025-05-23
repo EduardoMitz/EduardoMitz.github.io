@@ -281,6 +281,59 @@
             align-self: flex-start; /* Alinear a la izquierda */
             margin-right: auto;
         }
+
+        /* Ajustes para la navegación en pantallas pequeñas */
+        @media (max-width: 767px) {
+            header .container {
+                flex-direction: column;
+                align-items: center;
+            }
+            header h1 {
+                margin-bottom: 1rem;
+                font-size: 2rem; /* Ajuste de tamaño de fuente para dispositivos móviles */
+            }
+            header nav ul {
+                flex-wrap: wrap; /* Permitir que los elementos de navegación se envuelvan */
+                justify-content: center;
+                gap: 0.75rem; /* Espacio entre los elementos de navegación */
+            }
+            header nav ul li {
+                margin: 0; /* Eliminar márgenes predeterminados */
+            }
+            header nav ul li a, header nav ul li button {
+                padding: 0.5rem 0.75rem; /* Aumentar el área táctil */
+                font-size: 0.9rem; /* Ajustar el tamaño de fuente */
+            }
+            #openChatbotFloating {
+                bottom: 1rem; /* Ajustar posición del botón flotante en móvil */
+                left: 50%;
+                transform: translateX(-50%); /* Centrar el botón flotante */
+            }
+            #chatbot-container {
+                width: 90%; /* Hacer el chatbot más ancho en móvil */
+                left: 5%; /* Centrar el chatbot en móvil */
+                transform: translateY(-50%) translateX(-100%); /* Oculto por defecto */
+            }
+            #chatbot-container.show {
+                transform: translateY(-50%) translateX(0); /* Mostrarlo desde la izquierda */
+            }
+            .modal-content {
+                padding: 1.5rem; /* Reducir padding en modales para móvil */
+            }
+            .category-block {
+                padding: 1.5rem; /* Ajustar padding de bloques de categoría */
+                min-height: 150px; /* Reducir altura mínima */
+            }
+            .category-block i {
+                font-size: 2.5rem; /* Ajustar tamaño de icono */
+            }
+            main, section {
+                padding: 1rem; /* Reducir padding general en móvil */
+            }
+            h2 {
+                font-size: 2.5rem; /* Ajustar tamaño de encabezado principal */
+            }
+        }
     </style>
 </head>
 <body class="flex flex-col min-h-screen">
